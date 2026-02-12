@@ -1,6 +1,6 @@
 #pragma once
 
-#include <USBHIDKeyboard.h>
+#include <BleKeyboard.h>
 
 // ============================================================
 // Pin Configuration - ESP32-C3
@@ -58,8 +58,6 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define SLIDER_DEADZONE     30
 
 // Mouse movement scaling
-// Screen width mapped to slider travel.
-// Mouse HID reports relative movement (-127 to +127).
 // This controls how aggressively the cursor follows the slider.
 #define MOUSE_SPEED         8
 

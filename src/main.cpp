@@ -1,12 +1,11 @@
 #include <Arduino.h>
-#include <USB.h>
-#include <USBHIDKeyboard.h>
-#include <USBHIDMouse.h>
+#include <BleKeyboard.h>
+#include <BleMouse.h>
 #include "config.h"
 
-// USB HID devices
-USBHIDKeyboard Keyboard;
-USBHIDMouse Mouse;
+// BLE HID devices
+BleKeyboard bleKeyboard("infalsus-con", "Anthropic", 100);
+BleMouse    bleMouse("infalsus-con", "Anthropic", 100);
 
 // Button state tracking
 static bool     btn_pressed[NUM_BUTTONS]  = {};
@@ -20,6 +19,8 @@ static int slider_prev = -1;
 // Buttons are wired active-LOW (pressed = LOW).
 // --------------------------------------------------------
 static void handle_button(uint8_t idx) {
+    if (!bleKeyboard.isConnected()) return;
+
     bool raw = (digitalRead(BUTTON_PINS[idx]) == LOW);
     uint32_t now = millis();
 
@@ -29,9 +30,9 @@ static void handle_button(uint8_t idx) {
         btn_last_change[idx] = now;
 
         if (raw) {
-            Keyboard.press(BUTTON_KEYS[idx]);
+            bleKeyboard.press(BUTTON_KEYS[idx]);
         } else {
-            Keyboard.release(BUTTON_KEYS[idx]);
+            bleKeyboard.release(BUTTON_KEYS[idx]);
         }
     }
 }
@@ -42,6 +43,8 @@ static void handle_button(uint8_t idx) {
 // movement so the cursor tracks the slider position.
 // --------------------------------------------------------
 static void handle_slider() {
+    if (!bleMouse.isConnected()) return;
+
     int raw = analogRead(PIN_SLIDER);
 
     // First reading — just store, don't move
@@ -60,11 +63,11 @@ static void handle_slider() {
     slider_prev = raw;
 
     // Scale delta to mouse movement range (-127..127)
-    int move = (delta * MOUSE_SPEED) / 100;
-    move = constrain(move, -127, 127);
+    int move_x = (delta * MOUSE_SPEED) / 100;
+    move_x = constrain(move_x, -127, 127);
 
-    if (move != 0) {
-        Mouse.move(move, 0, 0);
+    if (move_x != 0) {
+        bleMouse.move(move_x, 0, 0);
     }
 }
 
@@ -81,10 +84,9 @@ void setup() {
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
-    // Start USB HID
-    Keyboard.begin();
-    Mouse.begin();
-    USB.begin();
+    // Start BLE HID
+    bleKeyboard.begin();
+    bleMouse.begin();
 }
 
 // --------------------------------------------------------
