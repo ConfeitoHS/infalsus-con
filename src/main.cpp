@@ -1,11 +1,11 @@
 #include <Arduino.h>
-#include <BleKeyboard.h>
-#include <BleMouse.h>
+#include <BleComboKeyboard.h>
+#include <BleComboMouse.h>
 #include "config.h"
 
-// BLE HID devices
-BleKeyboard bleKeyboard("infalsus-con", "Anthropic", 100);
-BleMouse    bleMouse("infalsus-con", "Anthropic", 100);
+// Single BLE combo device (keyboard + mouse share one connection)
+BleComboKeyboard bleKeyboard("infalsus-con", "Anthropic", 100);
+BleComboMouse    bleMouse(&bleKeyboard);
 
 // Button state tracking
 static bool     btn_pressed[NUM_BUTTONS]  = {};
@@ -43,7 +43,7 @@ static void handle_button(uint8_t idx) {
 // movement so the cursor tracks the slider position.
 // --------------------------------------------------------
 static void handle_slider() {
-    if (!bleMouse.isConnected()) return;
+    if (!bleKeyboard.isConnected()) return;
 
     int raw = analogRead(PIN_SLIDER);
 
@@ -84,9 +84,9 @@ void setup() {
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
-    // Start BLE HID
+    // Start BLE combo HID (single shared connection)
+    // Only call keyboard.begin() — mouse is initialized through it
     bleKeyboard.begin();
-    bleMouse.begin();
 }
 
 // --------------------------------------------------------

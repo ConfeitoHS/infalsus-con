@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BleKeyboard.h>
+#include <BleComboKeyboard.h>
 
 // ============================================================
 // Pin Configuration - ESP32-C3
