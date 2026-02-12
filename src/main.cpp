@@ -13,6 +13,7 @@ static uint32_t btn_last_change[NUM_BUTTONS] = {};
 
 // Slider state tracking
 static int slider_prev = -1;
+static float slider_smooth = -1;
 
 // --------------------------------------------------------
 // Read a single button with debounce.
@@ -50,20 +51,25 @@ static void handle_slider() {
     // First reading — just store, don't move
     if (slider_prev < 0) {
         slider_prev = raw;
+        slider_smooth = raw;
         return;
     }
 
-    int delta = raw - slider_prev;
+    // EMA low-pass filter to suppress ADC noise / jitter
+    slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
+
+    int filtered = (int)(slider_smooth + 0.5f);
+    int delta = filtered - slider_prev;
 
     // Apply deadzone
     if (abs(delta) < SLIDER_DEADZONE) {
         return;
     }
 
-    slider_prev = raw;
+    slider_prev = filtered;
 
-    // Scale delta to mouse movement range (-127..127)
-    int move_x = (delta * MOUSE_SPEED) / 100;
+    // Scale delta to mouse movement range (-127..127), apply inversion
+    int move_x = (delta * MOUSE_SPEED * MOUSE_INVERT_X) / 100;
     move_x = constrain(move_x, -127, 127);
 
     if (move_x != 0) {
