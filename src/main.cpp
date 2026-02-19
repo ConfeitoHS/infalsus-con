@@ -1,11 +1,16 @@
 #include <Arduino.h>
-#include <bluefruit.h>
+#include <Adafruit_TinyUSB.h>
 #include "config.h"
 
-// BLE services
-BLEDis        bledis;   // Device Information Service
-BLEBas        blebas;   // Battery Service
-BLEHidAdafruit blehid;  // HID Service (keyboard + mouse combined)
+// USB HID report descriptor: keyboard + mouse combo
+uint8_t const desc_hid_report[] = {
+    TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(RID_KEYBOARD)),
+    TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(RID_MOUSE))
+};
+
+// USB HID device
+Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report),
+                           HID_ITF_PROTOCOL_NONE, 2, false);
 
 // Button state tracking
 static bool     btn_pressed[NUM_BUTTONS]  = {};
@@ -28,7 +33,7 @@ static void send_keyboard_report() {
     for (uint8_t i = 0; i < 6 && i < active_key_count; i++) {
         keycodes[i] = active_keys[i];
     }
-    blehid.keyboardReport(active_modifier, keycodes);
+    usb_hid.keyboardReport(RID_KEYBOARD, active_modifier, keycodes);
 }
 
 // --------------------------------------------------------
@@ -36,7 +41,7 @@ static void send_keyboard_report() {
 // Buttons are wired active-LOW (pressed = LOW).
 // --------------------------------------------------------
 static void handle_button(uint8_t idx) {
-    if (!Bluefruit.connected()) return;
+    if (!USBDevice.mounted()) return;
 
     bool raw = (digitalRead(BUTTON_PINS[idx]) == LOW);
     uint32_t now = millis();
@@ -81,7 +86,7 @@ static void handle_button(uint8_t idx) {
 // Read the slider potentiometer and move mouse X axis.
 // --------------------------------------------------------
 static void handle_slider() {
-    if (!Bluefruit.connected()) return;
+    if (!USBDevice.mounted()) return;
 
     int raw = analogRead(PIN_SLIDER);
 
@@ -110,68 +115,30 @@ static void handle_slider() {
     move_x = constrain(move_x, -127, 127);
 
     if (move_x != 0) {
-        blehid.mouseMove((int8_t)move_x, 0);
+        usb_hid.mouseReport(RID_MOUSE, 0, move_x, 0, 0, 0);
     }
-}
-
-// --------------------------------------------------------
-// BLE callbacks
-// --------------------------------------------------------
-static void connect_cb(uint16_t conn_handle) {
-    (void)conn_handle;
-    Serial.println("BLE connected");
-}
-
-static void disconnect_cb(uint16_t conn_handle, uint8_t reason) {
-    (void)conn_handle;
-    (void)reason;
-    Serial.println("BLE disconnected");
 }
 
 // --------------------------------------------------------
 // Setup
 // --------------------------------------------------------
 void setup() {
-    Serial.begin(115200);
-
     // Configure button pins with internal pull-up
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(BUTTON_PINS[i], INPUT_PULLUP);
     }
 
-    // Configure slider ADC (12-bit for compatibility)
+    // Configure slider ADC (12-bit)
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
-    // Initialize Bluefruit
-    Bluefruit.begin();
-    Bluefruit.setTxPower(4);
-    Bluefruit.setName("infalsus-con");
-    Bluefruit.Periph.setConnectCallback(connect_cb);
-    Bluefruit.Periph.setDisconnectCallback(disconnect_cb);
+    // Initialize USB HID
+    usb_hid.begin();
 
-    // Device Information Service
-    bledis.setManufacturer("Anthropic");
-    bledis.setModel("infalsus-con nRF52840");
-    bledis.begin();
-
-    // Battery Service
-    blebas.begin();
-    blebas.write(100);
-
-    // HID Service (keyboard + mouse)
-    blehid.begin();
-
-    // Start advertising
-    Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
-    Bluefruit.Advertising.addTxPower();
-    Bluefruit.Advertising.addAppearance(BLE_APPEARANCE_HID_KEYBOARD);
-    Bluefruit.Advertising.addService(blehid);
-    Bluefruit.Advertising.addName();
-    Bluefruit.Advertising.restartOnDisconnect(true);
-    Bluefruit.Advertising.setInterval(32, 244);
-    Bluefruit.Advertising.setFastTimeout(30);
-    Bluefruit.Advertising.start(0);
+    // Wait for USB to be ready
+    while (!USBDevice.mounted()) {
+        delay(1);
+    }
 }
 
 // --------------------------------------------------------

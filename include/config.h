@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bluefruit.h>
+#include <Adafruit_TinyUSB.h>
 
 // ============================================================
 // Pin Configuration - nRF52840 Pro Micro
@@ -44,6 +44,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
     HID_KEY_F,           // Button 5
     HID_KEY_SPACE        // Button 6
 };
+
+// ============================================================
+// HID Report IDs
+// ============================================================
+#define RID_KEYBOARD    1
+#define RID_MOUSE       2
 
 // ============================================================
 // Tuning Parameters
