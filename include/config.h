@@ -58,9 +58,6 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Button debounce time (ms)
 #define DEBOUNCE_MS         20
 
-// Deadzone: ignore small slider movements (ADC units)
-#define SLIDER_DEADZONE     50
-
 // Mouse movement scaling
 #define MOUSE_SPEED         8
 

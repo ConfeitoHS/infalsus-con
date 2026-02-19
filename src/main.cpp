@@ -22,8 +22,8 @@ static uint8_t active_keys[6]   = {};
 static uint8_t active_key_count = 0;
 
 // Slider state tracking
-static int   slider_prev   = -1;
 static float slider_smooth = -1;
+static float slider_accum  = 0;
 
 // --------------------------------------------------------
 // Send the current keyboard state as a 6KRO HID report
@@ -91,31 +91,25 @@ static void handle_slider() {
     int raw = analogRead(PIN_SLIDER);
 
     // First reading — just store, don't move
-    if (slider_prev < 0) {
-        slider_prev = raw;
+    if (slider_smooth < 0) {
         slider_smooth = raw;
         return;
     }
 
+    float prev = slider_smooth;
+
     // EMA low-pass filter to suppress ADC noise / jitter
     slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
 
-    int filtered = (int)(slider_smooth + 0.5f);
-    int delta = filtered - slider_prev;
+    // Accumulate sub-pixel movement
+    float delta = (slider_smooth - prev) * MOUSE_SPEED * MOUSE_INVERT_X / 100.0f;
+    slider_accum += delta;
 
-    // Apply deadzone
-    if (abs(delta) < SLIDER_DEADZONE) {
-        return;
-    }
-
-    slider_prev = filtered;
-
-    // Scale delta to mouse movement range (-127..127), apply inversion
-    int move_x = (delta * MOUSE_SPEED * MOUSE_INVERT_X) / 100;
-    move_x = constrain(move_x, -127, 127);
-
-    if (move_x != 0) {
+    // Send when at least 1 pixel accumulated
+    if (fabsf(slider_accum) >= 1.0f) {
+        int move_x = constrain((int)slider_accum, -127, 127);
         usb_hid.mouseReport(RID_MOUSE, 0, move_x, 0, 0, 0);
+        slider_accum -= move_x;
     }
 }
 
