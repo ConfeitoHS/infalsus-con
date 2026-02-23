@@ -3,21 +3,43 @@
 #include <Adafruit_TinyUSB.h>
 
 // ============================================================
-// Pin Configuration - nRF52840 Pro Micro
+// Pin Configuration — nice!nano v2 (nRF52840)
+//
+// The SparkFun board definition has a 1:1 g_ADigitalPinMap,
+// so we specify nRF52840 GPIO numbers directly.
+//
+// nice!nano physical layout (front, USB up):
+//
+//         ┌──────────┐
+//         │  USB-C   │
+//    ─────┤          ├─────
+//   P0.06 ┤ D0   RAW ├ battery
+//   P0.08 ┤ D1   GND ├
+//     GND ┤      RST ├
+//     GND ┤      VCC ├ 3.3V out
+//   P0.17 ┤ D2   D21 ├ P0.31  (AIN7)
+//   P0.20 ┤ D3   D20 ├ P0.29  (AIN5)
+//   P0.22 ┤ D4   D19 ├ P0.02  (AIN0) ← slider here
+//   P0.24 ┤ D5   D18 ├ P1.15  (no ADC!)
+//   P1.00 ┤ D6   D15 ├ P1.13
+//   P0.11 ┤ D7   D14 ├ P1.11
+//   P1.04 ┤ D8   D16 ├ P0.10
+//   P1.06 ┤ D9   D10 ├ P0.09
+//         └──────────┘
 // ============================================================
 
-// Slider (potentiometer) - must be ADC-capable (AIN) pin
-// A0 = P0.02 (AIN0) on SparkFun Pro Micro nRF52840
+// Slider (potentiometer) — wire to D19 position (P0.02, AIN0)
+// With the SparkFun 1:1 mapping, A0 = pin 2 = GPIO P0.02 = AIN0.
 #define PIN_SLIDER      A0
 
 // Button pins (active LOW with internal pull-up)
-// Using Pro Micro digital pin positions
-#define PIN_BTN_1       2
-#define PIN_BTN_2       3
-#define PIN_BTN_3       4
-#define PIN_BTN_4       5
-#define PIN_BTN_5       6
-#define PIN_BTN_6       7
+// Left side D2–D7 on the nice!nano, specified as nRF52840 GPIO numbers.
+#define PIN_BTN_1       17  // P0.17 — nice!nano D2
+#define PIN_BTN_2       20  // P0.20 — nice!nano D3
+#define PIN_BTN_3       22  // P0.22 — nice!nano D4
+#define PIN_BTN_4       24  // P0.24 — nice!nano D5
+#define PIN_BTN_5       32  // P1.00 — nice!nano D6
+#define PIN_BTN_6       11  // P0.11 — nice!nano D7
 
 #define NUM_BUTTONS     6
 
