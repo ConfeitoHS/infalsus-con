@@ -76,47 +76,56 @@ static void send_keyboard_report() {
 }
 
 // --------------------------------------------------------
-// Read a single button with debounce.
-// Buttons are wired active-LOW (pressed = LOW).
+// Scan all buttons with debounce, then send ONE report
+// if anything changed.  This avoids back-to-back USB
+// reports that can be dropped when the endpoint is busy.
 // --------------------------------------------------------
-static void handle_button(uint8_t idx) {
+static void handle_buttons() {
     if (!USBDevice.mounted()) return;
 
-    bool raw = (digitalRead(BUTTON_PINS[idx]) == LOW);
+    bool changed = false;
     uint32_t now = millis();
 
-    if (raw != btn_pressed[idx] &&
-        (now - btn_last_change[idx]) >= DEBOUNCE_MS) {
-        btn_pressed[idx] = raw;
-        btn_last_change[idx] = now;
+    for (uint8_t idx = 0; idx < NUM_BUTTONS; idx++) {
+        bool raw = (digitalRead(BUTTON_PINS[idx]) == LOW);
 
-        uint8_t keycode = BUTTON_KEYS[idx];
-        bool is_modifier = (keycode >= HID_KEY_CONTROL_LEFT &&
-                            keycode <= HID_KEY_GUI_RIGHT);
+        if (raw != btn_pressed[idx] &&
+            (now - btn_last_change[idx]) >= DEBOUNCE_MS) {
+            btn_pressed[idx] = raw;
+            btn_last_change[idx] = now;
 
-        if (raw) {  // pressed
-            if (is_modifier) {
-                active_modifier |= (1 << (keycode - HID_KEY_CONTROL_LEFT));
-            } else if (active_key_count < 6) {
-                active_keys[active_key_count++] = keycode;
-            }
-        } else {    // released
-            if (is_modifier) {
-                active_modifier &= ~(1 << (keycode - HID_KEY_CONTROL_LEFT));
-            } else {
-                for (uint8_t i = 0; i < active_key_count; i++) {
-                    if (active_keys[i] == keycode) {
-                        for (uint8_t j = i; j < active_key_count - 1; j++) {
-                            active_keys[j] = active_keys[j + 1];
+            uint8_t keycode = BUTTON_KEYS[idx];
+            bool is_modifier = (keycode >= HID_KEY_CONTROL_LEFT &&
+                                keycode <= HID_KEY_GUI_RIGHT);
+
+            if (raw) {  // pressed
+                if (is_modifier) {
+                    active_modifier |= (1 << (keycode - HID_KEY_CONTROL_LEFT));
+                } else if (active_key_count < 6) {
+                    active_keys[active_key_count++] = keycode;
+                }
+            } else {    // released
+                if (is_modifier) {
+                    active_modifier &= ~(1 << (keycode - HID_KEY_CONTROL_LEFT));
+                } else {
+                    for (uint8_t i = 0; i < active_key_count; i++) {
+                        if (active_keys[i] == keycode) {
+                            for (uint8_t j = i; j < active_key_count - 1; j++) {
+                                active_keys[j] = active_keys[j + 1];
+                            }
+                            active_key_count--;
+                            active_keys[active_key_count] = 0;
+                            break;
                         }
-                        active_key_count--;
-                        active_keys[active_key_count] = 0;
-                        break;
                     }
                 }
             }
-        }
 
+            changed = true;
+        }
+    }
+
+    if (changed) {
         send_keyboard_report();
     }
 }
@@ -190,10 +199,8 @@ void setup() {
 // Main loop
 // --------------------------------------------------------
 void loop() {
-    // Process all buttons
-    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        handle_button(i);
-    }
+    // Scan all buttons, send one combined report if any changed
+    handle_buttons();
 
     // Process slider
     handle_slider();
