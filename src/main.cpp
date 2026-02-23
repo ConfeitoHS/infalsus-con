@@ -2,9 +2,10 @@
 #include <Adafruit_TinyUSB.h>
 #include "config.h"
 
-// Absolute mouse HID report descriptor (fallback if TinyUSB lacks it)
-#ifndef TUD_HID_REPORT_DESC_ABSMOUSE
-#define TUD_HID_REPORT_DESC_ABSMOUSE(...) \
+// Absolute mouse HID report descriptor.
+// Always use our own to guarantee the report struct matches exactly.
+// Layout: buttons(1 byte) + x(2) + y(2) = 5 bytes total.
+#define ABSMOUSE_REPORT_DESC(...) \
   HID_USAGE_PAGE ( HID_USAGE_PAGE_DESKTOP      )              ,\
   HID_USAGE      ( HID_USAGE_DESKTOP_MOUSE     )              ,\
   HID_COLLECTION ( HID_COLLECTION_APPLICATION   )              ,\
@@ -30,28 +31,20 @@
       HID_REPORT_COUNT( 2                      )              ,\
       HID_REPORT_SIZE ( 16                     )              ,\
       HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,\
-      HID_USAGE       ( HID_USAGE_DESKTOP_WHEEL )             ,\
-      HID_LOGICAL_MIN ( 0x81                   )              ,\
-      HID_LOGICAL_MAX ( 0x7f                   )              ,\
-      HID_REPORT_COUNT( 1                      )              ,\
-      HID_REPORT_SIZE ( 8                      )              ,\
-      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ) ,\
     HID_COLLECTION_END                                         ,\
   HID_COLLECTION_END
-#endif
 
-// Absolute mouse report (must match the descriptor above)
+// Must match the descriptor above exactly: buttons(1) + x(2) + y(2) = 5 bytes
 typedef struct __attribute__((packed)) {
     uint8_t  buttons;
     uint16_t x;
     uint16_t y;
-    int8_t   wheel;
 } abs_mouse_report_t;
 
 // USB HID report descriptor: keyboard + absolute mouse combo
 uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(RID_KEYBOARD)),
-    TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(RID_MOUSE))
+    ABSMOUSE_REPORT_DESC(HID_REPORT_ID(RID_MOUSE))
 };
 
 // USB HID device
@@ -137,6 +130,14 @@ static void handle_slider() {
 
     int raw = analogRead(PIN_SLIDER);
 
+    // Debug: print raw ADC value every ~500ms
+    static uint32_t last_dbg = 0;
+    if (millis() - last_dbg > 500) {
+        last_dbg = millis();
+        Serial.print("ADC raw=");
+        Serial.println(raw);
+    }
+
     // First reading — just store
     if (slider_smooth < 0) {
         slider_smooth = raw;
@@ -175,6 +176,9 @@ void setup() {
 
     // Initialize USB HID
     usb_hid.begin();
+
+    // Serial for debugging (optional — open serial monitor to see ADC values)
+    Serial.begin(115200);
 
     // Wait for USB to be ready
     while (!USBDevice.mounted()) {
