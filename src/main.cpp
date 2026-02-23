@@ -64,26 +64,30 @@ static uint8_t active_key_count = 0;
 static float    slider_smooth = -1;
 static uint16_t slider_last_x = 0xFFFF;
 
+// Keyboard report pending flag — set when a report needs to be
+// (re)sent because the USB endpoint was busy on the previous attempt.
+static bool kb_report_pending = false;
+
 // --------------------------------------------------------
-// Send the current keyboard state as a 6KRO HID report
+// Send the current keyboard state as a 6KRO HID report.
+// Returns true if the USB send succeeded.
 // --------------------------------------------------------
-static void send_keyboard_report() {
+static bool send_keyboard_report() {
     uint8_t keycodes[6] = {};
     for (uint8_t i = 0; i < 6 && i < active_key_count; i++) {
         keycodes[i] = active_keys[i];
     }
-    usb_hid.keyboardReport(RID_KEYBOARD, active_modifier, keycodes);
+    return usb_hid.keyboardReport(RID_KEYBOARD, active_modifier, keycodes);
 }
 
 // --------------------------------------------------------
 // Scan all buttons with debounce, then send ONE report
-// if anything changed.  This avoids back-to-back USB
-// reports that can be dropped when the endpoint is busy.
+// if anything changed.  If the USB endpoint was busy the
+// report is retried on the next poll cycle.
 // --------------------------------------------------------
 static void handle_buttons() {
     if (!USBDevice.mounted()) return;
 
-    bool changed = false;
     uint32_t now = millis();
 
     for (uint8_t idx = 0; idx < NUM_BUTTONS; idx++) {
@@ -121,12 +125,17 @@ static void handle_buttons() {
                 }
             }
 
-            changed = true;
+            kb_report_pending = true;
         }
     }
 
-    if (changed) {
-        send_keyboard_report();
+    // Send (or re-send) the report. The full keyboard state is sent
+    // every time, so even if several changes accumulated the host
+    // receives the correct final state once the endpoint is free.
+    if (kb_report_pending) {
+        if (send_keyboard_report()) {
+            kb_report_pending = false;
+        }
     }
 }
 
@@ -156,8 +165,9 @@ static void handle_slider() {
     // EMA low-pass filter to suppress ADC noise / jitter
     slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
 
-    // Map to HID absolute range (0-32767)
-    uint16_t abs_x = (uint16_t)(slider_smooth * (32767.0f / 4095.0f));
+    // Clamp to configured ADC range, then map to HID absolute (0-32767)
+    float clamped = (slider_smooth < SLIDER_ADC_MAX) ? slider_smooth : SLIDER_ADC_MAX;
+    uint16_t abs_x = (uint16_t)(clamped * (32767.0f / SLIDER_ADC_MAX));
     if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
     // Only send when position actually changed
