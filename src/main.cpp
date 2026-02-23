@@ -2,10 +2,56 @@
 #include <Adafruit_TinyUSB.h>
 #include "config.h"
 
-// USB HID report descriptor: keyboard + mouse combo
+// Absolute mouse HID report descriptor (fallback if TinyUSB lacks it)
+#ifndef TUD_HID_REPORT_DESC_ABSMOUSE
+#define TUD_HID_REPORT_DESC_ABSMOUSE(...) \
+  HID_USAGE_PAGE ( HID_USAGE_PAGE_DESKTOP      )              ,\
+  HID_USAGE      ( HID_USAGE_DESKTOP_MOUSE     )              ,\
+  HID_COLLECTION ( HID_COLLECTION_APPLICATION   )              ,\
+    __VA_ARGS__ \
+    HID_USAGE      ( HID_USAGE_DESKTOP_POINTER  )             ,\
+    HID_COLLECTION ( HID_COLLECTION_PHYSICAL     )             ,\
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_BUTTON  )              ,\
+      HID_USAGE_MIN   ( 1                      )              ,\
+      HID_USAGE_MAX   ( 5                      )              ,\
+      HID_LOGICAL_MIN ( 0                      )              ,\
+      HID_LOGICAL_MAX ( 1                      )              ,\
+      HID_REPORT_COUNT( 5                      )              ,\
+      HID_REPORT_SIZE ( 1                      )              ,\
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,\
+      HID_REPORT_COUNT( 1                      )              ,\
+      HID_REPORT_SIZE ( 3                      )              ,\
+      HID_INPUT       ( HID_CONSTANT           )              ,\
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_DESKTOP )              ,\
+      HID_USAGE       ( HID_USAGE_DESKTOP_X    )              ,\
+      HID_USAGE       ( HID_USAGE_DESKTOP_Y    )              ,\
+      HID_LOGICAL_MIN_N ( 0, 2                 )              ,\
+      HID_LOGICAL_MAX_N ( 0x7FFF, 2            )              ,\
+      HID_REPORT_COUNT( 2                      )              ,\
+      HID_REPORT_SIZE ( 16                     )              ,\
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,\
+      HID_USAGE       ( HID_USAGE_DESKTOP_WHEEL )             ,\
+      HID_LOGICAL_MIN ( 0x81                   )              ,\
+      HID_LOGICAL_MAX ( 0x7f                   )              ,\
+      HID_REPORT_COUNT( 1                      )              ,\
+      HID_REPORT_SIZE ( 8                      )              ,\
+      HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ) ,\
+    HID_COLLECTION_END                                         ,\
+  HID_COLLECTION_END
+#endif
+
+// Absolute mouse report (must match the descriptor above)
+typedef struct __attribute__((packed)) {
+    uint8_t  buttons;
+    uint16_t x;
+    uint16_t y;
+    int8_t   wheel;
+} abs_mouse_report_t;
+
+// USB HID report descriptor: keyboard + absolute mouse combo
 uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(RID_KEYBOARD)),
-    TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(RID_MOUSE))
+    TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(RID_MOUSE))
 };
 
 // USB HID device
@@ -22,8 +68,8 @@ static uint8_t active_keys[6]   = {};
 static uint8_t active_key_count = 0;
 
 // Slider state tracking
-static float slider_smooth = -1;
-static float slider_accum  = 0;
+static float    slider_smooth = -1;
+static uint16_t slider_last_x = 0xFFFF;
 
 // --------------------------------------------------------
 // Send the current keyboard state as a 6KRO HID report
@@ -83,34 +129,35 @@ static void handle_button(uint8_t idx) {
 }
 
 // --------------------------------------------------------
-// Read the slider potentiometer and move mouse X axis.
+// Read the slider potentiometer and send absolute mouse X.
+// ADC 12-bit (0-4095) → HID absolute (0-32767).
 // --------------------------------------------------------
 static void handle_slider() {
     if (!USBDevice.mounted()) return;
 
     int raw = analogRead(PIN_SLIDER);
 
-    // First reading — just store, don't move
+    // First reading — just store
     if (slider_smooth < 0) {
         slider_smooth = raw;
         return;
     }
 
-    float prev = slider_smooth;
-
     // EMA low-pass filter to suppress ADC noise / jitter
     slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
 
-    // Accumulate sub-pixel movement
-    float delta = (slider_smooth - prev) * MOUSE_SPEED * MOUSE_INVERT_X / 100.0f;
-    slider_accum += delta;
+    // Map to HID absolute range (0-32767)
+    uint16_t abs_x = (uint16_t)(slider_smooth * (32767.0f / 4095.0f));
+    if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
-    // Send when at least 1 pixel accumulated
-    if (fabsf(slider_accum) >= 1.0f) {
-        int move_x = constrain((int)slider_accum, -127, 127);
-        usb_hid.mouseReport(RID_MOUSE, 0, move_x, 0, 0, 0);
-        slider_accum -= move_x;
-    }
+    // Only send when position actually changed
+    if (abs_x == slider_last_x) return;
+    slider_last_x = abs_x;
+
+    abs_mouse_report_t report = {};
+    report.x = abs_x;
+    report.y = SLIDER_ABS_Y;
+    usb_hid.sendReport(RID_MOUSE, &report, sizeof(report));
 }
 
 // --------------------------------------------------------

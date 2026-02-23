@@ -76,11 +76,11 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Button debounce time (ms)
 #define DEBOUNCE_MS         20
 
-// Mouse movement scaling
-#define MOUSE_SPEED         8
-
 // Invert mouse X direction (set to -1 to reverse, 1 for normal)
 #define MOUSE_INVERT_X      -1
+
+// Fixed absolute Y position (0-32767). Center = 16384.
+#define SLIDER_ABS_Y        16384
 
 // EMA smoothing factor (0.0 - 1.0). Lower = smoother but laggier.
 #define SLIDER_SMOOTHING    0.3f
