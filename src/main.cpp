@@ -170,8 +170,8 @@ static void handle_slider() {
     uint16_t abs_x = (uint16_t)(clamped * (32767.0f / SLIDER_ADC_MAX));
     if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
-    // Only send when position actually changed
-    if (abs_x == slider_last_x) return;
+    // Only send when movement exceeds dead-zone threshold
+    if (abs(abs_x - slider_last_x) < 100) return;
     slider_last_x = abs_x;
 
     abs_mouse_report_t report = {};
