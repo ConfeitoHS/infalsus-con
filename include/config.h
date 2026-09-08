@@ -44,6 +44,21 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
     PIN_BTN_4, PIN_BTN_5, PIN_BTN_6
 };
 
+// LED pins (active HIGH, one per button)
+// Right side pins on the nice!nano
+// Wiring: LED pin → 220Ω resistor → LED(+) → LED(-) → GND
+#define PIN_LED_1       10  // D10 — P0.09  (for Button 1)
+#define PIN_LED_2       11  // D11 — P0.10  (for Button 2)
+#define PIN_LED_3       12  // D12 — P1.11  (for Button 3)
+#define PIN_LED_4       13  // D13 — P1.13  (for Button 4)
+#define PIN_LED_5       14  // D14 — P1.15  (for Button 5)
+#define PIN_LED_6       18  // D18 — P1.01  (for Button 6)
+
+static const uint8_t LED_PINS[NUM_BUTTONS] = {
+    PIN_LED_1, PIN_LED_2, PIN_LED_3,
+    PIN_LED_4, PIN_LED_5, PIN_LED_6
+};
+
 // ============================================================
 // Key Mapping (HID keycodes from TinyUSB)
 // ============================================================

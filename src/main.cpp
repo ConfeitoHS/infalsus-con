@@ -125,6 +125,7 @@ static void handle_buttons() {
                 }
             }
 
+            digitalWrite(LED_PINS[idx], raw ? HIGH : LOW);
             kb_report_pending = true;
         }
     }
@@ -187,6 +188,12 @@ void setup() {
     // Configure button pins with internal pull-up
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(BUTTON_PINS[i], INPUT_PULLUP);
+    }
+
+    // Configure LED pins as output (off initially)
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        pinMode(LED_PINS[i], OUTPUT);
+        digitalWrite(LED_PINS[i], LOW);
     }
 
     // Configure slider ADC (12-bit)
