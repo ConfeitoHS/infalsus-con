@@ -14,14 +14,14 @@
 //   P0.08 ┤ D1   GND ├
 //     GND ┤      RST ├
 //     GND ┤      VCC ├ 3.3V out
-//   P0.17 ┤ D2   D21 ├ P0.31  (A2)
-//   P0.20 ┤ D3   D20 ├ P0.29  (A1)
-//   P0.22 ┤ D4   D19 ├ P0.02  (A0) ← slider here
-//   P0.24 ┤ D5   D18 ├ P1.15  (no ADC!)
-//   P1.00 ┤ D6   D15 ├ P1.13
-//   P0.11 ┤ D7   D14 ├ P1.11
-//   P1.04 ┤ D8   D16 ├ P0.10
-//   P1.06 ┤ D9   D10 ├ P0.09
+//   P0.17 ┤ D2   D17 ├ P0.31  (A2)
+//   P0.20 ┤ D3   D16 ├ P0.29  ← LED6
+//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← slider
+//   P0.24 ┤ D5   D14 ├ P1.15  ← LED5
+//   P1.00 ┤ D6   D13 ├ P1.13  ← LED4
+//   P0.11 ┤ D7   D12 ├ P1.11  ← LED3
+//   P1.04 ┤ D8   D11 ├ P0.10  ← LED2
+//   P1.06 ┤ D9   D10 ├ P0.09  ← LED1
 //         └──────────┘
 // ============================================================
 
@@ -52,7 +52,7 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
 #define PIN_LED_3       12  // D12 — P1.11  (for Button 3)
 #define PIN_LED_4       13  // D13 — P1.13  (for Button 4)
 #define PIN_LED_5       14  // D14 — P1.15  (for Button 5)
-#define PIN_LED_6       18  // D18 — P1.01  (for Button 6)
+#define PIN_LED_6       16  // D16 — P0.29  (for Button 6)
 
 static const uint8_t LED_PINS[NUM_BUTTONS] = {
     PIN_LED_1, PIN_LED_2, PIN_LED_3,
