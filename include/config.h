@@ -46,7 +46,9 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
 
 // LED pins (active HIGH, one per button)
 // Right side pins on the nice!nano
-// Wiring: LED pin → 220Ω resistor → LED(+) → LED(-) → GND
+// Wiring: LED pin → 1kΩ resistor → LED(+) → LED(-) → GND
+// 1kΩ keeps each LED near 1.3mA; nRF52840 standard-drive GPIO is ~2mA/pin
+// and ~15mA total, so 220Ω would exceed that with all six lit.
 #define PIN_LED_1       10  // D10 — P0.09  (for Button 1)
 #define PIN_LED_2       11  // D11 — P0.10  (for Button 2)
 #define PIN_LED_3       12  // D12 — P1.11  (for Button 3)
