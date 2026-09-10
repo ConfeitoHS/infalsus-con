@@ -100,9 +100,13 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Fixed absolute Y position (0-32767). Center = 16384.
 #define SLIDER_ABS_Y        16384
 
-// Slider ADC range — adjust SLIDER_ADC_MAX to match your potentiometer's
-// actual maximum reading (check Serial debug output).
-#define SLIDER_ADC_MAX      3780
+// Slider ADC range — with the VDD reference the pot's top end reads
+// near full scale. Lower this if the cursor never reaches the screen edge
+// (check Serial debug output for the actual maximum).
+#define SLIDER_ADC_MAX      4060
+
+// Samples averaged per poll before the EMA filter
+#define SLIDER_OVERSAMPLE   8
 
 // EMA smoothing factor (0.0 - 1.0). Lower = smoother but laggier.
 #define SLIDER_SMOOTHING    0.3f

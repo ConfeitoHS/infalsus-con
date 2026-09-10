@@ -147,7 +147,11 @@ static void handle_buttons() {
 static void handle_slider() {
     if (!USBDevice.mounted()) return;
 
-    int raw = analogRead(PIN_SLIDER);
+    int32_t acc = 0;
+    for (uint8_t i = 0; i < SLIDER_OVERSAMPLE; i++) {
+        acc += analogRead(PIN_SLIDER);
+    }
+    int raw = acc / SLIDER_OVERSAMPLE;
 
     // Debug: print raw ADC value every ~500ms
     static uint32_t last_dbg = 0;
@@ -238,7 +242,9 @@ void setup() {
 
     led_self_test();
 
-    // Configure slider ADC (12-bit)
+    // Configure slider ADC (12-bit). VDD reference makes the reading
+    // ratiometric to the pot's supply, so LED-induced rail dips cancel out.
+    analogReference(AR_VDD4);
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
