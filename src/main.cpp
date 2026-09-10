@@ -215,6 +215,16 @@ static void led_self_test() {
 void setup() {
     release_nfc_pins_as_gpio();
 
+    // HID must be registered before the host enumerates us; anything slow
+    // (the LED sweep) has to come after this.
+    usb_hid.begin();
+    if (USBDevice.mounted()) {
+        // Host already enumerated without HID — force re-enumeration
+        USBDevice.detach();
+        delay(10);
+        USBDevice.attach();
+    }
+
     // Configure button pins with internal pull-up
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(BUTTON_PINS[i], INPUT_PULLUP);
@@ -231,9 +241,6 @@ void setup() {
     // Configure slider ADC (12-bit)
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
-
-    // Initialize USB HID
-    usb_hid.begin();
 
     // Serial for debugging (optional — open serial monitor to see ADC values)
     Serial.begin(115200);
