@@ -182,9 +182,39 @@ static void handle_slider() {
 }
 
 // --------------------------------------------------------
+// P0.09 / P0.10 are wired to the NFC antenna block by default and
+// ignore GPIO writes until UICR.NFCPINS is cleared. This is a one-time
+// flash write that survives re-flashing; the chip must reset afterward.
+// --------------------------------------------------------
+static void release_nfc_pins_as_gpio() {
+    if ((NRF_UICR->NFCPINS & UICR_NFCPINS_PROTECT_Msk) !=
+        (UICR_NFCPINS_PROTECT_NFC << UICR_NFCPINS_PROTECT_Pos)) {
+        return;
+    }
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NRF_UICR->NFCPINS &= ~UICR_NFCPINS_PROTECT_Msk;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NVIC_SystemReset();
+}
+
+// Light each LED in turn at boot so wiring can be checked without pressing anything
+static void led_self_test() {
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        digitalWrite(LED_PINS[i], HIGH);
+        delay(120);
+        digitalWrite(LED_PINS[i], LOW);
+    }
+}
+
+// --------------------------------------------------------
 // Setup
 // --------------------------------------------------------
 void setup() {
+    release_nfc_pins_as_gpio();
+
     // Configure button pins with internal pull-up
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(BUTTON_PINS[i], INPUT_PULLUP);
@@ -195,6 +225,8 @@ void setup() {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
     }
+
+    led_self_test();
 
     // Configure slider ADC (12-bit)
     analogReadResolution(12);
