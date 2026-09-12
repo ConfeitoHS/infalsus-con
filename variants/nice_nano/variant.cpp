@@ -45,7 +45,7 @@ void initVariant()
     pinMode(EXT_VCC, OUTPUT);
     digitalWrite(EXT_VCC, HIGH);
 
-    // enable LED by default
+    // keep the onboard blue status LED off
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(LED_BUILTIN, LOW);
 }
