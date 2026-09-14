@@ -114,7 +114,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Smallest change (HID units, 0-32767) that gets sent to the host.
 // 32767 units span the screen, so 24 ≈ 1.4px on a 1920px display.
 // Raise this if the cursor twitches while the slider is untouched.
-#define SLIDER_MIN_STEP     24
+#define SLIDER_MIN_STEP     32
 
 // How often to read inputs (ms)
 #define POLL_INTERVAL_MS    2
