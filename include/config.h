@@ -44,11 +44,12 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
     PIN_BTN_4, PIN_BTN_5, PIN_BTN_6
 };
 
-// LED pins (active HIGH, one per button)
-// Right side pins on the nice!nano
-// Wiring: LED pin → 1kΩ resistor → LED(+) → LED(-) → GND
-// 1kΩ keeps each LED near 1.3mA; nRF52840 standard-drive GPIO is ~2mA/pin
-// and ~15mA total, so 220Ω would exceed that with all six lit.
+// LED pins (active HIGH, one per button), driven through an NPN transistor
+// so LED current comes from VCC instead of the GPIO:
+//   pin → 4.7kΩ → 2N2222 base; emitter → GND;
+//   collector → LED(-) ; LED(+) → 220Ω → 3.3V
+// (Driving the LED straight from the pin also works with a 1kΩ resistor,
+// but nRF52840 GPIO is limited to ~2mA/pin, ~15mA total.)
 // P0.09/P0.10 are NFC pins; main.cpp clears UICR.NFCPINS so they work as GPIO
 #define PIN_LED_1       10  // D10 — P0.09  (for Button 1)
 #define PIN_LED_2       11  // D11 — P0.10  (for Button 2)
