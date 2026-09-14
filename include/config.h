@@ -116,5 +116,6 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Raise this if the cursor twitches while the slider is untouched.
 #define SLIDER_MIN_STEP     32
 
-// How often to read inputs (ms)
-#define POLL_INTERVAL_MS    2
+// Input scan period and USB HID polling interval (ms). 1 = 1000Hz,
+// the fastest a full-speed USB device can be polled.
+#define POLL_INTERVAL_MS    1

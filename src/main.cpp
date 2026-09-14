@@ -49,7 +49,7 @@ uint8_t const desc_hid_report[] = {
 
 // USB HID device
 Adafruit_USBD_HID usb_hid(desc_hid_report, sizeof(desc_hid_report),
-                           HID_ITF_PROTOCOL_NONE, 2, false);
+                           HID_ITF_PROTOCOL_NONE, POLL_INTERVAL_MS, false);
 
 // Button state tracking
 static bool     btn_pressed[NUM_BUTTONS]  = {};
