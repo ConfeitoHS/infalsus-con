@@ -109,7 +109,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define SLIDER_OVERSAMPLE   8
 
 // EMA smoothing factor (0.0 - 1.0). Lower = smoother but laggier.
-#define SLIDER_SMOOTHING    0.3f
+#define SLIDER_SMOOTHING    0.5f
+
+// Smallest change (HID units, 0-32767) that gets sent to the host.
+// 32767 units span the screen, so 24 ≈ 1.4px on a 1920px display.
+// Raise this if the cursor twitches while the slider is untouched.
+#define SLIDER_MIN_STEP     24
 
 // How often to read inputs (ms)
 #define POLL_INTERVAL_MS    2

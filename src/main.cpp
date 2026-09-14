@@ -176,7 +176,7 @@ static void handle_slider() {
     if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
     // Only send when movement exceeds dead-zone threshold
-    if (abs(abs_x - slider_last_x) < 100) return;
+    if (abs(abs_x - slider_last_x) < SLIDER_MIN_STEP) return;
     slider_last_x = abs_x;
 
     abs_mouse_report_t report = {};
