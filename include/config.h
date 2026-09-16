@@ -115,15 +115,24 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define SLIDER_ADC_MAX      4060
 
 // Samples averaged per poll before the EMA filter
-#define SLIDER_OVERSAMPLE   8
+#define SLIDER_OVERSAMPLE   16
 
-// EMA smoothing factor (0.0 - 1.0). Lower = smoother but laggier.
-#define SLIDER_SMOOTHING    0.5f
+// Adaptive EMA: the smoothing factor scales with how fast the slider is
+// moving, so it filters hard while nearly still and follows quickly when
+// moved. alpha = MIN + |raw - smooth| * GAIN, capped at MAX.
+#define SLIDER_SMOOTHING_MIN    0.08f
+#define SLIDER_SMOOTHING_MAX    0.6f
+#define SLIDER_SPEED_GAIN       0.02f
 
-// Smallest change (HID units, 0-32767) that gets sent to the host.
-// 32767 units span the screen, so 24 ≈ 1.4px on a 1920px display.
-// Raise this if the cursor twitches while the slider is untouched.
-#define SLIDER_MIN_STEP     32
+// Smallest change (HID units, 0-32767) sent while the slider is moving.
+// 32767 units span the screen, so 16 ≈ 1px on a 1920px display.
+#define SLIDER_MIN_STEP     16
+
+// After SLIDER_REST_MS without a change ≥ SLIDER_MIN_STEP the slider is
+// considered at rest and nothing is sent until it moves ≥ SLIDER_WAKE_STEP
+// (64 ≈ 4px) — this is what stops the cursor twitching when untouched.
+#define SLIDER_WAKE_STEP    64
+#define SLIDER_REST_MS      150
 
 // Input scan period and USB HID polling interval (ms). 1 = 1000Hz,
 // the fastest a full-speed USB device can be polled.

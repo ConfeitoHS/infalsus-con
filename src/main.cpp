@@ -67,6 +67,8 @@ static uint8_t active_key_count = 0;
 // Slider state tracking
 static float    slider_smooth = -1;
 static uint16_t slider_last_x = 0xFFFF;
+static bool     slider_resting = false;
+static uint32_t slider_last_move = 0;
 
 // Slider-unit cable presence (detect pin LOW = plugged in)
 static bool     slider_connected = false;
@@ -138,7 +140,10 @@ static int read_slider() {
         slider_smooth = raw;
         return -1;
     }
-    slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
+    float diff  = raw - slider_smooth;
+    float alpha = SLIDER_SMOOTHING_MIN + fabsf(diff) * SLIDER_SPEED_GAIN;
+    if (alpha > SLIDER_SMOOTHING_MAX) alpha = SLIDER_SMOOTHING_MAX;
+    slider_smooth += alpha * diff;
 
     int v = (int)slider_smooth;
     return (v < SLIDER_ADC_MAX) ? v : SLIDER_ADC_MAX;
@@ -236,6 +241,7 @@ static void handle_slider_detect() {
     slider_connected = raw;
     slider_smooth = -1;
     slider_last_x = 0xFFFF;
+    slider_resting = false;
     Serial.println(raw ? "slider: connected" : "slider: disconnected");
 
     uint8_t flashes = raw ? 1 : 2;
@@ -270,8 +276,18 @@ static void handle_slider() {
     uint16_t abs_x = (uint16_t)((uint32_t)adc * 32767UL / SLIDER_ADC_MAX);
     if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
-    // Only send when movement exceeds dead-zone threshold
-    if (abs(abs_x - slider_last_x) < SLIDER_MIN_STEP) return;
+    // Rest lock: once still, ignore anything smaller than a deliberate move
+    uint16_t delta = (abs_x > slider_last_x) ? abs_x - slider_last_x
+                                             : slider_last_x - abs_x;
+    uint32_t now = millis();
+    if (slider_resting) {
+        if (delta < SLIDER_WAKE_STEP) return;
+        slider_resting = false;
+    } else if (delta < SLIDER_MIN_STEP) {
+        if (now - slider_last_move >= SLIDER_REST_MS) slider_resting = true;
+        return;
+    }
+    slider_last_move = now;
     slider_last_x = abs_x;
 
     abs_mouse_report_t report = {};

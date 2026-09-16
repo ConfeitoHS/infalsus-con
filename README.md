@@ -54,7 +54,8 @@ nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 �
 - `DEBOUNCE_MS`: 버튼 디바운스 (20)
 - `MOUSE_INVERT_X`: 슬라이더 방향 (-1 / 1)
 - `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
-- `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING`: 노이즈 필터 강도
-- `SLIDER_MIN_STEP`: 이만큼 움직여야 전송 (32)
+- `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING_MIN/MAX`, `SLIDER_SPEED_GAIN`: 적응형 노이즈 필터
+- `SLIDER_MIN_STEP`: 움직이는 중 이만큼 변해야 전송 (16)
+- `SLIDER_WAKE_STEP`, `SLIDER_REST_MS`: 정지 판정 후 다시 움직임으로 인정하는 최소 이동(64)과 정지 판정 시간(150ms)
 - `POLL_INTERVAL_MS`: 폴링 주기 (1)
 - `BRIGHTNESS_WINDOW_MS`: 밝기 설정 모드 진입 가능 시간 (10000)
