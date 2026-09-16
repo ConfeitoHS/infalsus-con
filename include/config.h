@@ -120,3 +120,17 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Input scan period and USB HID polling interval (ms). 1 = 1000Hz,
 // the fastest a full-speed USB device can be polled.
 #define POLL_INTERVAL_MS    1
+
+// ============================================================
+// LED brightness
+// ============================================================
+
+// PWM level (0-255) used until one is saved from brightness-setup mode
+#define LED_BRIGHTNESS_DEFAULT  255
+
+// Lowest level the slider can set, so LEDs never end up invisible
+#define LED_BRIGHTNESS_MIN      3
+
+// Hold all buttons within this long after USB connects to enter
+// brightness-setup mode (slider sets level, any button saves and exits)
+#define BRIGHTNESS_WINDOW_MS    10000

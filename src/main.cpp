@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
+#include <Adafruit_LittleFS.h>
+#include <InternalFileSystem.h>
 #include "config.h"
+
+using namespace Adafruit_LittleFS_Namespace;
 
 // Absolute mouse HID report descriptor.
 // Always use our own to guarantee the report struct matches exactly.
@@ -68,6 +72,73 @@ static uint16_t slider_last_x = 0xFFFF;
 // (re)sent because the USB endpoint was busy on the previous attempt.
 static bool kb_report_pending = false;
 
+// LED brightness (PWM duty), persisted in internal flash
+static uint8_t  led_brightness = LED_BRIGHTNESS_DEFAULT;
+static const char* BRIGHTNESS_FILE = "/led_brightness";
+
+// Brightness-setup mode can only be entered until this time after boot
+static uint32_t brightness_window_end = 0;
+static bool     brightness_window_open = true;
+
+static void led_set(uint8_t idx, bool on) {
+    analogWrite(LED_PINS[idx], on ? led_brightness : 0);
+}
+
+static void leds_all(uint8_t level) {
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        analogWrite(LED_PINS[i], level);
+    }
+}
+
+static void load_brightness() {
+    File f(InternalFS);
+    if (!f.open(BRIGHTNESS_FILE, FILE_O_READ)) return;
+    uint8_t b;
+    if (f.read(&b, 1) == 1 && b >= LED_BRIGHTNESS_MIN) led_brightness = b;
+    f.close();
+}
+
+static void save_brightness() {
+    InternalFS.remove(BRIGHTNESS_FILE);
+    File f(InternalFS);
+    if (!f.open(BRIGHTNESS_FILE, FILE_O_WRITE)) return;
+    f.write(&led_brightness, 1);
+    f.close();
+}
+
+static bool any_button_down() {
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        if (digitalRead(BUTTON_PINS[i]) == LOW) return true;
+    }
+    return false;
+}
+
+static bool all_buttons_down() {
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        if (digitalRead(BUTTON_PINS[i]) != LOW) return false;
+    }
+    return true;
+}
+
+// Oversampled + EMA-filtered slider reading, clamped to 0..SLIDER_ADC_MAX.
+// Returns -1 on the very first call (filter not primed yet).
+static int read_slider() {
+    int32_t acc = 0;
+    for (uint8_t i = 0; i < SLIDER_OVERSAMPLE; i++) {
+        acc += analogRead(PIN_SLIDER);
+    }
+    int raw = acc / SLIDER_OVERSAMPLE;
+
+    if (slider_smooth < 0) {
+        slider_smooth = raw;
+        return -1;
+    }
+    slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
+
+    int v = (int)slider_smooth;
+    return (v < SLIDER_ADC_MAX) ? v : SLIDER_ADC_MAX;
+}
+
 // --------------------------------------------------------
 // Send the current keyboard state as a 6KRO HID report.
 // Returns true if the USB send succeeded.
@@ -125,7 +196,7 @@ static void handle_buttons() {
                 }
             }
 
-            digitalWrite(LED_PINS[idx], raw ? HIGH : LOW);
+            led_set(idx, raw);
             kb_report_pending = true;
         }
     }
@@ -147,32 +218,19 @@ static void handle_buttons() {
 static void handle_slider() {
     if (!USBDevice.mounted()) return;
 
-    int32_t acc = 0;
-    for (uint8_t i = 0; i < SLIDER_OVERSAMPLE; i++) {
-        acc += analogRead(PIN_SLIDER);
-    }
-    int raw = acc / SLIDER_OVERSAMPLE;
+    int adc = read_slider();
+    if (adc < 0) return;
 
-    // Debug: print raw ADC value every ~500ms
+    // Debug: print filtered ADC value every ~500ms
     static uint32_t last_dbg = 0;
     if (millis() - last_dbg > 500) {
         last_dbg = millis();
-        Serial.print("ADC raw=");
-        Serial.println(raw);
+        Serial.print("ADC=");
+        Serial.println(adc);
     }
 
-    // First reading — just store
-    if (slider_smooth < 0) {
-        slider_smooth = raw;
-        return;
-    }
-
-    // EMA low-pass filter to suppress ADC noise / jitter
-    slider_smooth = slider_smooth + SLIDER_SMOOTHING * (raw - slider_smooth);
-
-    // Clamp to configured ADC range, then map to HID absolute (0-32767)
-    float clamped = (slider_smooth < SLIDER_ADC_MAX) ? slider_smooth : SLIDER_ADC_MAX;
-    uint16_t abs_x = (uint16_t)(clamped * (32767.0f / SLIDER_ADC_MAX));
+    // Map to HID absolute (0-32767)
+    uint16_t abs_x = (uint16_t)((uint32_t)adc * 32767UL / SLIDER_ADC_MAX);
     if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
 
     // Only send when movement exceeds dead-zone threshold
@@ -207,9 +265,54 @@ static void release_nfc_pins_as_gpio() {
 // Light each LED in turn at boot so wiring can be checked without pressing anything
 static void led_self_test() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        digitalWrite(LED_PINS[i], HIGH);
+        led_set(i, true);
         delay(120);
-        digitalWrite(LED_PINS[i], LOW);
+        led_set(i, false);
+    }
+}
+
+// --------------------------------------------------------
+// Brightness setup: entered by holding all buttons shortly after
+// boot. The slider sets the LED level live; any button press saves
+// it and returns to normal operation.
+// --------------------------------------------------------
+static void brightness_mode() {
+    // The host saw the six-key chord — release everything first
+    active_modifier  = 0;
+    active_key_count = 0;
+    memset(active_keys, 0, sizeof(active_keys));
+    send_keyboard_report();
+
+    while (any_button_down()) delay(10);
+
+    while (true) {
+        int adc = read_slider();
+        if (adc >= 0) {
+            uint32_t level = (uint32_t)adc * 255UL / SLIDER_ADC_MAX;
+            if (MOUSE_INVERT_X < 0) level = 255 - level;
+            if (level < LED_BRIGHTNESS_MIN) level = LED_BRIGHTNESS_MIN;
+            led_brightness = (uint8_t)level;
+            leds_all(led_brightness);
+        }
+        if (any_button_down()) break;
+        delay(POLL_INTERVAL_MS);
+    }
+
+    save_brightness();
+
+    for (uint8_t k = 0; k < 2; k++) {
+        leds_all(0);
+        delay(120);
+        leds_all(led_brightness);
+        delay(120);
+    }
+    leds_all(0);
+
+    // Swallow the confirming press so it is not sent as a key
+    while (any_button_down()) delay(10);
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        btn_pressed[i] = false;
+        btn_last_change[i] = millis();
     }
 }
 
@@ -240,6 +343,9 @@ void setup() {
         digitalWrite(LED_PINS[i], LOW);
     }
 
+    InternalFS.begin();
+    load_brightness();
+
     led_self_test();
 
     // Configure slider ADC (12-bit). VDD reference makes the reading
@@ -255,12 +361,24 @@ void setup() {
     while (!USBDevice.mounted()) {
         delay(1);
     }
+
+    brightness_window_end = millis() + BRIGHTNESS_WINDOW_MS;
 }
 
 // --------------------------------------------------------
 // Main loop
 // --------------------------------------------------------
 void loop() {
+    if (brightness_window_open) {
+        if ((int32_t)(millis() - brightness_window_end) >= 0) {
+            brightness_window_open = false;
+        } else if (all_buttons_down()) {
+            brightness_window_open = false;
+            brightness_mode();
+            return;
+        }
+    }
+
     // Scan all buttons, send one combined report if any changed
     handle_buttons();
 

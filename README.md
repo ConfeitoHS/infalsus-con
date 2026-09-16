@@ -1,68 +1,58 @@
 # infalsus-con
 
-ESP32-C3 기반 BLE HID 게임 컨트롤러. 6개 버튼(키보드)과 슬라이드 포텐셔미터(마우스 X축)를 지원합니다.
-
-> ESP32-C3는 USB OTG를 지원하지 않으므로 (USB Serial/JTAG만 탑재) BLE HID로 연결합니다.
+nice!nano v2 (nRF52840) 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X, 절대 좌표)를 지원하고, 버튼마다 LED가 켜집니다.
 
 ## 하드웨어
 
-- **MCU**: ESP32-C3 DevKitC-02
-- **버튼**: 택트 스위치 x6
-- **슬라이더**: SC-1009G (B10K x2, 듀얼 리니어 포텐셔미터)
+- **MCU**: nice!nano v2 (Pro Micro 호환 nRF52840)
+- **버튼**: 택트 스위치 ×6 → 핀과 GND 사이 (내부 풀업)
+- **LED**: ×6, 2N2222 트랜지스터로 구동 (GPIO → 4.7kΩ → B, C → LED → 220Ω → 3.3V)
+- **슬라이더**: 10kΩ 리니어 포텐셔미터, 양 끝 3.3V/GND, 가운데 핀 → ADC
+- **콘덴서**: 100nF (슬라이더 신호–GND), 10µF (3.3V–GND)
 
-## 배선도 (Wiring)
+핀 배정과 배선도는 `include/config.h` 상단 주석을 보세요.
 
-### 버튼 (Active LOW, 내부 풀업 사용)
-
-각 버튼의 한쪽 핀을 GPIO에, 다른 쪽을 GND에 연결합니다.
-
-| 버튼 | GPIO | 매핑 키 |
-|------|------|---------|
-| 1 | GPIO1 | Left Shift |
-| 2 | GPIO2 | A |
-| 3 | GPIO3 | S |
-| 4 | GPIO4 | D |
-| 5 | GPIO5 | F |
-| 6 | GPIO6 | Space |
-
-### 슬라이더 (SC-1009G)
-
-듀얼 포텐셔미터이므로 한쪽 트랙만 사용합니다. 핀이 3개인 쪽(또는 6핀 중 한쪽 3핀)을 사용하세요.
-
-```
-[슬라이더 핀 배치 - 한쪽 트랙 3핀]
-
-  핀1 (한쪽 끝)  →  3.3V
-  핀2 (와이퍼)   →  GPIO0
-  핀3 (다른 끝)  →  GND
-```
-
-> **주의**: 반드시 **3.3V**를 사용하세요. 5V를 연결하면 ESP32-C3의 ADC가 손상될 수 있습니다.
-
-## BLE 페어링
-
-1. 펌웨어 업로드 후 ESP32-C3 전원을 켭니다.
-2. PC의 블루투스 설정에서 **"infalsus-con"** 장치를 검색합니다.
-3. 페어링하면 키보드 + 마우스로 자동 인식됩니다.
+| 부품 | 보드 라벨 | 키 |
+|---|---|---|
+| SW1–SW6 | 017 020 022 024 100 011 | Shift A S D F Space |
+| LED1–LED6 | 009 010 111 113 115 002 | (같은 순서) |
+| 슬라이더 | 029 | 마우스 X |
 
 ## 빌드 & 업로드
 
 ```bash
-# PlatformIO CLI
 pio run              # 빌드
-pio run -t upload    # 업로드
-pio device monitor   # 시리얼 모니터
+pio run -t upload    # 업로드 (1200bps 터치로 부트로더 자동 진입)
+pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출력
 ```
 
-## 키 매핑 변경
+자동 진입이 안 되면 RST를 GND에 두 번 빠르게 터치해 `NICENANO` 드라이브가 뜬 상태에서 업로드하세요. 시리얼 모니터가 열려 있으면 업로드가 실패합니다.
 
-`include/config.h`에서 `BUTTON_KEYS` 배열을 수정하세요.
+nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
 
-## 파라미터 조정
+## 동작
 
-`include/config.h`에서 조정 가능한 값:
+- 부팅 시 LED1→6이 순서대로 한 번씩 켜집니다 (배선 확인용).
+- 버튼을 누르면 해당 키가 전송되고 LED가 켜집니다. 6키 동시 입력, 1000Hz 폴링.
+- 슬라이더 위치가 화면의 절대 X 좌표로 전송됩니다.
 
-- `DEBOUNCE_MS`: 버튼 디바운스 시간 (기본: 20ms)
-- `SLIDER_DEADZONE`: 슬라이더 미세 떨림 무시 범위 (기본: 30)
-- `MOUSE_SPEED`: 슬라이더→마우스 이동 속도 배율 (기본: 8)
-- `POLL_INTERVAL_MS`: 입력 폴링 주기 (기본: 2ms)
+### LED 밝기 설정
+
+1. USB를 꽂고 **10초 안에 버튼 6개를 동시에** 누릅니다.
+2. LED가 전부 켜지면 슬라이더로 밝기를 조절합니다 (실시간 반영).
+3. 아무 버튼이나 누르면 저장됩니다. LED가 두 번 깜빡이면 완료.
+
+밝기는 내부 플래시에 저장되어 전원을 뽑아도 유지됩니다.
+
+## 파라미터
+
+`include/config.h`에서 조정:
+
+- `BUTTON_KEYS`: 키 매핑
+- `DEBOUNCE_MS`: 버튼 디바운스 (20)
+- `MOUSE_INVERT_X`: 슬라이더 방향 (-1 / 1)
+- `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
+- `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING`: 노이즈 필터 강도
+- `SLIDER_MIN_STEP`: 이만큼 움직여야 전송 (32)
+- `POLL_INTERVAL_MS`: 폴링 주기 (1)
+- `BRIGHTNESS_WINDOW_MS`: 밝기 설정 모드 진입 가능 시간 (10000)
