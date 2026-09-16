@@ -14,7 +14,7 @@
 //   P0.08 ┤ D1   GND ├
 //     GND ┤      RST ├
 //     GND ┤      VCC ├ 3.3V out
-//   P0.17 ┤ D2   D17 ├ P0.31  (A2)
+//   P0.17 ┤ D2   D17 ├ P0.31  ← slider cable detect
 //   P0.20 ┤ D3   D16 ├ P0.29  (A1) ← slider
 //   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← LED6
 //   P0.24 ┤ D5   D14 ├ P1.15  ← LED5
@@ -27,6 +27,11 @@
 
 // Slider (potentiometer) wiper — board label 029 (P0.29, AIN5)
 #define PIN_SLIDER      A1
+
+// Slider-unit cable detect — board label 031 (P0.31). Wired to the 2nd
+// ring contact of the 4-pole jack; the plug's sleeve shorts it to GND
+// whenever a cable is inserted, so LOW = connected.
+#define PIN_SLIDER_DETECT   17
 
 // Button pins (active LOW with internal pull-up)
 // Left side D2–D7 on the nice!nano
@@ -94,6 +99,9 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 
 // Button debounce time (ms)
 #define DEBOUNCE_MS         20
+
+// Slider cable plug/unplug debounce (ms)
+#define SLIDER_DETECT_DEBOUNCE_MS   50
 
 // Invert mouse X direction (set to -1 to reverse, 1 for normal)
 #define MOUSE_INVERT_X      -1

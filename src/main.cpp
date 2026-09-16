@@ -68,6 +68,11 @@ static uint8_t active_key_count = 0;
 static float    slider_smooth = -1;
 static uint16_t slider_last_x = 0xFFFF;
 
+// Slider-unit cable presence (detect pin LOW = plugged in)
+static bool     slider_connected = false;
+static bool     slider_detect_raw = false;
+static uint32_t slider_detect_changed = 0;
+
 // Keyboard report pending flag — set when a report needs to be
 // (re)sent because the USB endpoint was busy on the previous attempt.
 static bool kb_report_pending = false;
@@ -212,11 +217,43 @@ static void handle_buttons() {
 }
 
 // --------------------------------------------------------
+// Watch the cable-detect contact. On unplug the ADC input floats,
+// so mouse reports are suppressed until a cable is back; LEDs flash
+// once on connect and twice on disconnect.
+// --------------------------------------------------------
+static void handle_slider_detect() {
+    bool raw = (digitalRead(PIN_SLIDER_DETECT) == LOW);
+    uint32_t now = millis();
+
+    if (raw != slider_detect_raw) {
+        slider_detect_raw = raw;
+        slider_detect_changed = now;
+        return;
+    }
+    if (raw == slider_connected) return;
+    if (now - slider_detect_changed < SLIDER_DETECT_DEBOUNCE_MS) return;
+
+    slider_connected = raw;
+    slider_smooth = -1;
+    slider_last_x = 0xFFFF;
+    Serial.println(raw ? "slider: connected" : "slider: disconnected");
+
+    uint8_t flashes = raw ? 1 : 2;
+    for (uint8_t k = 0; k < flashes; k++) {
+        leds_all(led_brightness);
+        delay(80);
+        leds_all(0);
+        delay(80);
+    }
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) led_set(i, btn_pressed[i]);
+}
+
+// --------------------------------------------------------
 // Read the slider potentiometer and send absolute mouse X.
 // ADC 12-bit (0-4095) → HID absolute (0-32767).
 // --------------------------------------------------------
 static void handle_slider() {
-    if (!USBDevice.mounted()) return;
+    if (!USBDevice.mounted() || !slider_connected) return;
 
     int adc = read_slider();
     if (adc < 0) return;
@@ -284,7 +321,7 @@ static void brightness_mode() {
     send_keyboard_report();
 
     while (all_buttons_down()) {
-        int adc = read_slider();
+        int adc = slider_connected ? read_slider() : -1;
         if (adc >= 0) {
             uint32_t level = (uint32_t)adc * 255UL / SLIDER_ADC_MAX;
             if (MOUSE_INVERT_X < 0) level = 255 - level;
@@ -351,6 +388,10 @@ void setup() {
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
+    pinMode(PIN_SLIDER_DETECT, INPUT_PULLUP);
+    delay(5);
+    slider_detect_raw = slider_connected = (digitalRead(PIN_SLIDER_DETECT) == LOW);
+
     // Serial for debugging (optional — open serial monitor to see ADC values)
     Serial.begin(115200);
 
@@ -380,6 +421,7 @@ void loop() {
     handle_buttons();
 
     // Process slider
+    handle_slider_detect();
     handle_slider();
 
     delay(POLL_INTERVAL_MS);
