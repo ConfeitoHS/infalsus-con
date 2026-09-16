@@ -15,8 +15,8 @@
 //     GND ┤      RST ├
 //     GND ┤      VCC ├ 3.3V out
 //   P0.17 ┤ D2   D17 ├ P0.31  (A2)
-//   P0.20 ┤ D3   D16 ├ P0.29  ← LED6
-//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← slider
+//   P0.20 ┤ D3   D16 ├ P0.29  (A1) ← slider
+//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← LED6
 //   P0.24 ┤ D5   D14 ├ P1.15  ← LED5
 //   P1.00 ┤ D6   D13 ├ P1.13  ← LED4
 //   P0.11 ┤ D7   D12 ├ P1.11  ← LED3
@@ -25,8 +25,8 @@
 //         └──────────┘
 // ============================================================
 
-// Slider (potentiometer) — wire to D19 position (P0.02, AIN0)
-#define PIN_SLIDER      A0
+// Slider (potentiometer) wiper — board label 029 (P0.29, AIN5)
+#define PIN_SLIDER      A1
 
 // Button pins (active LOW with internal pull-up)
 // Left side D2–D7 on the nice!nano
@@ -56,7 +56,7 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
 #define PIN_LED_3       12  // D12 — P1.11  (for Button 3)
 #define PIN_LED_4       13  // D13 — P1.13  (for Button 4)
 #define PIN_LED_5       14  // D14 — P1.15  (for Button 5)
-#define PIN_LED_6       16  // D16 — P0.29  (for Button 6)
+#define PIN_LED_6       15  // D15 — P0.02  (for Button 6)
 
 static const uint8_t LED_PINS[NUM_BUTTONS] = {
     PIN_LED_1, PIN_LED_2, PIN_LED_3,
