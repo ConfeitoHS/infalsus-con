@@ -132,5 +132,6 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define LED_BRIGHTNESS_MIN      3
 
 // Hold all buttons within this long after USB connects to enter
-// brightness-setup mode (slider sets level, any button saves and exits)
+// brightness-setup mode: while held the slider sets the level,
+// releasing saves and exits
 #define BRIGHTNESS_WINDOW_MS    10000

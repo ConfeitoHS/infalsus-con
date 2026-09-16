@@ -272,9 +272,9 @@ static void led_self_test() {
 }
 
 // --------------------------------------------------------
-// Brightness setup: entered by holding all buttons shortly after
-// boot. The slider sets the LED level live; any button press saves
-// it and returns to normal operation.
+// Brightness setup: hold all buttons shortly after boot. While they
+// stay held the slider sets the LED level live; letting go of any
+// button saves it and returns to normal operation.
 // --------------------------------------------------------
 static void brightness_mode() {
     // The host saw the six-key chord — release everything first
@@ -283,9 +283,7 @@ static void brightness_mode() {
     memset(active_keys, 0, sizeof(active_keys));
     send_keyboard_report();
 
-    while (any_button_down()) delay(10);
-
-    while (true) {
+    while (all_buttons_down()) {
         int adc = read_slider();
         if (adc >= 0) {
             uint32_t level = (uint32_t)adc * 255UL / SLIDER_ADC_MAX;
@@ -294,7 +292,6 @@ static void brightness_mode() {
             led_brightness = (uint8_t)level;
             leds_all(led_brightness);
         }
-        if (any_button_down()) break;
         delay(POLL_INTERVAL_MS);
     }
 
@@ -308,7 +305,7 @@ static void brightness_mode() {
     }
     leds_all(0);
 
-    // Swallow the confirming press so it is not sent as a key
+    // Wait for the remaining buttons to be let go so none is sent as a key
     while (any_button_down()) delay(10);
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         btn_pressed[i] = false;
