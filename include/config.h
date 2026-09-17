@@ -148,6 +148,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Lowest level the slider can set, so LEDs never end up invisible
 #define LED_BRIGHTNESS_MIN      3
 
+// Fraction of the pot's electrical travel the knob can actually reach
+// (100mm pot in a 60mm housing). Brightness setup maps this span to
+// MIN..255; positions outside it clamp to the nearest end.
+#define SLIDER_USABLE_MIN       0.25f
+#define SLIDER_USABLE_MAX       0.75f
+
 // Hold all buttons within this long after USB connects to enter
 // brightness-setup mode: while held the slider sets the level,
 // releasing saves and exits

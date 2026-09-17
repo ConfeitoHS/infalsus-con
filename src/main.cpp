@@ -339,8 +339,13 @@ static void brightness_mode() {
     while (all_buttons_down()) {
         int adc = slider_connected ? read_slider() : -1;
         if (adc >= 0) {
-            uint32_t level = (uint32_t)adc * 255UL / SLIDER_ADC_MAX;
-            if (MOUSE_INVERT_X < 0) level = 255 - level;
+            const float lo = SLIDER_ADC_MAX * SLIDER_USABLE_MIN;
+            const float hi = SLIDER_ADC_MAX * SLIDER_USABLE_MAX;
+            float pos = (adc - lo) / (hi - lo);
+            if (pos < 0.0f) pos = 0.0f;
+            if (pos > 1.0f) pos = 1.0f;
+            if (MOUSE_INVERT_X < 0) pos = 1.0f - pos;
+            uint32_t level = (uint32_t)(pos * 255.0f + 0.5f);
             if (level < LED_BRIGHTNESS_MIN) level = LED_BRIGHTNESS_MIN;
             led_brightness = (uint8_t)level;
             leds_all(led_brightness);
