@@ -145,8 +145,11 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // PWM level (0-255) used until one is saved from brightness-setup mode
 #define LED_BRIGHTNESS_DEFAULT  255
 
-// Lowest level the slider can set, so LEDs never end up invisible
-#define LED_BRIGHTNESS_MIN      3
+// Lowest level the slider can set (0 = fully off)
+#define LED_BRIGHTNESS_MIN      0
+
+// Level used by the boot self-test sweep, independent of the saved value
+#define LED_SELFTEST_LEVEL      128
 
 // Fraction of the pot's electrical travel the knob can actually reach
 // (100mm pot in a 60mm housing). Brightness setup maps this span to

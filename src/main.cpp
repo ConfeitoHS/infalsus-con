@@ -101,7 +101,7 @@ static void load_brightness() {
     File f(InternalFS);
     if (!f.open(BRIGHTNESS_FILE, FILE_O_READ)) return;
     uint8_t b;
-    if (f.read(&b, 1) == 1 && b >= LED_BRIGHTNESS_MIN) led_brightness = b;
+    if (f.read(&b, 1) == 1) led_brightness = b;
     f.close();
 }
 
@@ -246,7 +246,7 @@ static void handle_slider_detect() {
 
     uint8_t flashes = raw ? 1 : 2;
     for (uint8_t k = 0; k < flashes; k++) {
-        leds_all(led_brightness);
+        leds_all(LED_SELFTEST_LEVEL);
         delay(80);
         leds_all(0);
         delay(80);
@@ -318,9 +318,9 @@ static void release_nfc_pins_as_gpio() {
 // Light each LED in turn at boot so wiring can be checked without pressing anything
 static void led_self_test() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        led_set(i, true);
+        analogWrite(LED_PINS[i], LED_SELFTEST_LEVEL);
         delay(120);
-        led_set(i, false);
+        analogWrite(LED_PINS[i], 0);
     }
 }
 
@@ -358,7 +358,7 @@ static void brightness_mode() {
     for (uint8_t k = 0; k < 2; k++) {
         leds_all(0);
         delay(120);
-        leds_all(led_brightness);
+        leds_all(LED_SELFTEST_LEVEL);
         delay(120);
     }
     leds_all(0);
