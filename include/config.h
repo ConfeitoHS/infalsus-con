@@ -12,16 +12,17 @@
 //    ─────┤          ├─────
 //   P0.06 ┤ D0   RAW ├ battery
 //   P0.08 ┤ D1   GND ├
-//     GND ┤      RST ├
+//     GND ┤      RST ├ ← reset tact switch → GND
 //     GND ┤      VCC ├ 3.3V out
 //   P0.17 ┤ D2   D17 ├ P0.31  ← slider cable detect
 //   P0.20 ┤ D3   D16 ├ P0.29  (A1) ← slider
-//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← LED6
-//   P0.24 ┤ D5   D14 ├ P1.15  ← LED5
-//   P1.00 ┤ D6   D13 ├ P1.13  ← LED4
-//   P0.11 ┤ D7   D12 ├ P1.11  ← LED3
-//   P1.04 ┤ D8   D11 ├ P0.10  ← LED2
-//   P1.06 ┤ D9   D10 ├ P0.09  ← LED1
+//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← SW1
+//   P0.24 ┤ D5   D14 ├ P1.15  ← SW2
+//   P1.00 ┤ D6   D13 ├ P1.13  ← SW3
+//   P0.11 ┤ D7   D12 ├ P1.11  ← SW4
+//   P1.04 ┤ D8   D11 ├ P0.10  ← SW5
+//   P1.06 ┤ D9   D10 ├ P0.09  ← SW6
+//   LED1..LED6 on D4..D9 (left side)
 //         └──────────┘
 // ============================================================
 
@@ -34,13 +35,13 @@
 #define PIN_SLIDER_DETECT   17
 
 // Button pins (active LOW with internal pull-up)
-// Left side D2–D7 on the nice!nano
-#define PIN_BTN_1       2   // D2  — P0.17
-#define PIN_BTN_2       3   // D3  — P0.20
-#define PIN_BTN_3       4   // D4  — P0.22
-#define PIN_BTN_4       5   // D5  — P0.24
-#define PIN_BTN_5       6   // D6  — P1.00
-#define PIN_BTN_6       7   // D7  — P0.11
+// Right side of the nice!nano, top to bottom
+#define PIN_BTN_1       15  // A0  — P0.02
+#define PIN_BTN_2       14  // D14 — P1.15
+#define PIN_BTN_3       13  // D13 — P1.13
+#define PIN_BTN_4       12  // D12 — P1.11
+#define PIN_BTN_5       11  // D11 — P0.10
+#define PIN_BTN_6       10  // D10 — P0.09  (NFC pin; main.cpp clears UICR.NFCPINS)
 
 #define NUM_BUTTONS     6
 
@@ -55,13 +56,13 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
 //   collector → LED(-) ; LED(+) → 220Ω → 3.3V
 // (Driving the LED straight from the pin also works with a 1kΩ resistor,
 // but nRF52840 GPIO is limited to ~2mA/pin, ~15mA total.)
-// P0.09/P0.10 are NFC pins; main.cpp clears UICR.NFCPINS so they work as GPIO
-#define PIN_LED_1       10  // D10 — P0.09  (for Button 1)
-#define PIN_LED_2       11  // D11 — P0.10  (for Button 2)
-#define PIN_LED_3       12  // D12 — P1.11  (for Button 3)
-#define PIN_LED_4       13  // D13 — P1.13  (for Button 4)
-#define PIN_LED_5       14  // D14 — P1.15  (for Button 5)
-#define PIN_LED_6       15  // D15 — P0.02  (for Button 6)
+// Left side of the nice!nano, D4..D9 top to bottom
+#define PIN_LED_1       4   // D4 — P0.22  (for Button 1)
+#define PIN_LED_2       5   // D5 — P0.24  (for Button 2)
+#define PIN_LED_3       6   // D6 — P1.00  (for Button 3)
+#define PIN_LED_4       7   // D7 — P0.11  (for Button 4)
+#define PIN_LED_5       8   // D8 — P1.04  (for Button 5)
+#define PIN_LED_6       9   // D9 — P1.06  (for Button 6)
 
 static const uint8_t LED_PINS[NUM_BUTTONS] = {
     PIN_LED_1, PIN_LED_2, PIN_LED_3,
