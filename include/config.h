@@ -121,11 +121,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // going much higher makes the cursor move in 2px steps.
 #define MOUSE_REL_PIXELS_PER_TRAVEL 3840.0f
 
-// Manual re-centre: tap at least RECENTER_CHORD_KEYS buttons together
+// Manual re-centre: tap the buttons in RECENTER_CHORD_MASK together
 // RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
 // equal to the slider's offset from centre. Use right after the game has
 // warped its cursor to the centre so its position matches the slider.
-#define RECENTER_CHORD_KEYS 6
+// Mask bit i = button i+1. 0b011110 = SW2..SW5 (A S D F).
+#define RECENTER_CHORD_MASK 0b011110
 #define RECENTER_TAPS       4
 #define RECENTER_WINDOW_MS  500
 
