@@ -115,8 +115,10 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // 0 = send the slider's absolute screen position.
 #define MOUSE_MODE_RELATIVE 1
 
-// Pixels the full slider travel corresponds to. Used by relative mode and
-// by the manual re-centre move. 1920 = one screen width on 1080p.
+// Pixels the full (electrical) slider travel corresponds to. Used by
+// relative mode and by the manual re-centre move. 3840: the ~60mm reachable
+// in the housing covers one 1080p screen width at ~1 ADC step per pixel;
+// going much higher makes the cursor move in 2px steps.
 #define MOUSE_REL_PIXELS_PER_TRAVEL 3840.0f
 
 // Manual re-centre (absolute mode helper): tap SW1+SW6 together this many
