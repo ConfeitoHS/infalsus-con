@@ -260,15 +260,20 @@ static void handle_slider_detect() {
 // Send a relative mouse move of `units` HID-absolute units, converted to
 // pixels. The fractional remainder is carried to the next call so slow
 // moves are not lost to rounding; big moves are split into int8 steps.
-static void send_rel_dx(int32_t units) {
+static void send_rel_dx(int32_t units, int8_t max_step = 127, uint8_t pace_ms = 0) {
     static float carry = 0;
     float px = units * (MOUSE_REL_PIXELS_PER_TRAVEL / 32767.0f) + carry;
     int32_t dx = (int32_t)px;
     carry = px - dx;
     while (dx != 0) {
-        int8_t step = (dx > 127) ? 127 : (dx < -127) ? -127 : (int8_t)dx;
+        int8_t step = (dx > max_step) ? max_step : (dx < -max_step) ? (int8_t)-max_step : (int8_t)dx;
+        // The endpoint may still be busy with a keyboard report; wait for
+        // it rather than dropping the move.
+        uint32_t t0 = millis();
+        while (!usb_hid.ready() && millis() - t0 < 20) delay(1);
         if (!usb_hid.mouseReport(RID_MOUSE_REL, 0, step, 0, 0, 0)) break;
         dx -= step;
+        if (pace_ms) delay(pace_ms);
     }
 }
 
@@ -295,7 +300,11 @@ static void handle_recenter_chord() {
         if (taps >= RECENTER_TAPS) {
             taps = 0;
             if (slider_last_x != 0xFFFF) {
-                send_rel_dx((int32_t)slider_last_x - 16384);
+                Serial.print("recenter: dx units=");
+                Serial.println((int32_t)slider_last_x - 16384);
+                // Spread the move over many small steps so it looks like a
+                // hand movement rather than one huge jump the game may reject
+                send_rel_dx((int32_t)slider_last_x - 16384, RECENTER_STEP_PX, RECENTER_STEP_MS);
                 for (uint8_t k = 0; k < 2; k++) {
                     leds_all(LED_SELFTEST_LEVEL); delay(60);
                     leds_all(0);                  delay(60);
