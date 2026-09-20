@@ -125,8 +125,8 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
 // equal to the slider's offset from centre. Use right after the game has
 // warped its cursor to the centre so its position matches the slider.
-#define RECENTER_CHORD_KEYS 5
-#define RECENTER_TAPS       3
+#define RECENTER_CHORD_KEYS 6
+#define RECENTER_TAPS       4
 #define RECENTER_WINDOW_MS  500
 
 // The re-centre move is sent as small steps spaced out in time, like a
