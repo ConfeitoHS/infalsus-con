@@ -113,11 +113,18 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 //     (in falsus) need this: the game's centre becomes the reference and
 //     no manual re-centring is needed.
 // 0 = send the slider's absolute screen position.
-#define MOUSE_MODE_RELATIVE 1
+#define MOUSE_MODE_RELATIVE 0
 
-// Relative mode: how many pixels the full slider travel moves the cursor.
-// 1920 = one screen width on a 1080p display.
+// Pixels the full slider travel corresponds to. Used by relative mode and
+// by the manual re-centre move. 1920 = one screen width on 1080p.
 #define MOUSE_REL_PIXELS_PER_TRAVEL 1920.0f
+
+// Manual re-centre (absolute mode helper): tap SW1+SW6 together this many
+// times within the window to send one relative move equal to the slider's
+// offset from centre. Use right after the game has warped its cursor to
+// the centre so its position matches the slider.
+#define RECENTER_TAPS       3
+#define RECENTER_WINDOW_MS  1000
 
 // Absolute mode only: fixed Y position (0-32767). Center = 16384.
 #define SLIDER_ABS_Y        16384

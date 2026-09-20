@@ -257,6 +257,56 @@ static void handle_slider_detect() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) led_set(i, btn_pressed[i]);
 }
 
+// Send a relative mouse move of `units` HID-absolute units, converted to
+// pixels. The fractional remainder is carried to the next call so slow
+// moves are not lost to rounding; big moves are split into int8 steps.
+static void send_rel_dx(int32_t units) {
+    static float carry = 0;
+    float px = units * (MOUSE_REL_PIXELS_PER_TRAVEL / 32767.0f) + carry;
+    int32_t dx = (int32_t)px;
+    carry = px - dx;
+    while (dx != 0) {
+        int8_t step = (dx > 127) ? 127 : (dx < -127) ? -127 : (int8_t)dx;
+        if (!usb_hid.mouseReport(RID_MOUSE_REL, 0, step, 0, 0, 0)) break;
+        dx -= step;
+    }
+}
+
+// --------------------------------------------------------
+// Manual re-centre: tap SW1+SW6 together RECENTER_TAPS times within
+// RECENTER_WINDOW_MS. Sends one relative move equal to the slider's
+// offset from centre, so a game that has just warped its cursor to the
+// centre ends up aligned with where the slider physically is.
+// --------------------------------------------------------
+static void handle_recenter_chord() {
+    static bool     chord_was_down = false;
+    static uint8_t  taps = 0;
+    static uint32_t first_tap = 0;
+
+    bool chord = btn_pressed[0] && btn_pressed[NUM_BUTTONS - 1];
+    uint32_t now = millis();
+
+    if (chord && !chord_was_down) {
+        if (taps == 0 || now - first_tap > RECENTER_WINDOW_MS) {
+            taps = 0;
+            first_tap = now;
+        }
+        taps++;
+        if (taps >= RECENTER_TAPS) {
+            taps = 0;
+            if (slider_last_x != 0xFFFF) {
+                send_rel_dx((int32_t)slider_last_x - 16384);
+                for (uint8_t k = 0; k < 2; k++) {
+                    leds_all(LED_SELFTEST_LEVEL); delay(60);
+                    leds_all(0);                  delay(60);
+                }
+                for (uint8_t i = 0; i < NUM_BUTTONS; i++) led_set(i, btn_pressed[i]);
+            }
+        }
+    }
+    chord_was_down = chord;
+}
+
 // --------------------------------------------------------
 // Read the slider potentiometer and send absolute mouse X.
 // ADC 12-bit (0-4095) → HID absolute (0-32767).
@@ -297,18 +347,7 @@ static void handle_slider() {
 #if MOUSE_MODE_RELATIVE
     // First sample after (re)connect only sets the reference point
     if (prev_x == 0xFFFF) return;
-
-    // Convert the change in slider position to pixels, carrying the
-    // fractional remainder so slow moves are not lost to rounding
-    static float rel_carry = 0;
-    float px = ((int32_t)abs_x - (int32_t)prev_x) * (MOUSE_REL_PIXELS_PER_TRAVEL / 32767.0f) + rel_carry;
-    int32_t dx = (int32_t)px;
-    rel_carry = px - dx;
-    while (dx != 0) {
-        int8_t step = (dx > 127) ? 127 : (dx < -127) ? -127 : (int8_t)dx;
-        if (!usb_hid.mouseReport(RID_MOUSE_REL, 0, step, 0, 0, 0)) break;
-        dx -= step;
-    }
+    send_rel_dx((int32_t)abs_x - (int32_t)prev_x);
 #else
     abs_mouse_report_t report = {};
     report.x = abs_x;
@@ -461,6 +500,7 @@ void loop() {
 
     // Scan all buttons, send one combined report if any changed
     handle_buttons();
+    handle_recenter_chord();
 
     // Process slider
     handle_slider_detect();
