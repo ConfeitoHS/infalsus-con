@@ -125,8 +125,10 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
 // equal to the slider's offset from centre. Use right after the game has
 // warped its cursor to the centre so its position matches the slider.
-// Mask bit i = button i+1. 0b011110 = SW2..SW5 (A S D F).
-#define RECENTER_CHORD_MASK 0b011110
+// Mask bit i = button i+1. All of CHORD_MASK plus at least one of ANY_MASK
+// must be down: 0b011110 = A S D F, 0b100001 = Shift or Space.
+#define RECENTER_CHORD_MASK     0b011110
+#define RECENTER_CHORD_ANY_MASK 0b100001
 #define RECENTER_TAPS       4
 #define RECENTER_WINDOW_MS  500
 
