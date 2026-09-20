@@ -126,6 +126,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define RECENTER_TAPS       3
 #define RECENTER_WINDOW_MS  1000
 
+// The re-centre move is sent as small steps spaced out in time, like a
+// hand movement, so games that clamp or discard huge deltas accept it.
+// 8px every 2ms = ~1000px in 250ms.
+#define RECENTER_STEP_PX    8
+#define RECENTER_STEP_MS    2
+
 // Absolute mode only: fixed Y position (0-32767). Center = 16384.
 #define SLIDER_ABS_Y        16384
 
