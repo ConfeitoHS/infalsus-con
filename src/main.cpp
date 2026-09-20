@@ -278,7 +278,7 @@ static void send_rel_dx(int32_t units, int8_t max_step = 127, uint8_t pace_ms = 
 }
 
 // --------------------------------------------------------
-// Manual re-centre: tap any RECENTER_CHORD_KEYS (or more) buttons together
+// Manual re-centre: tap the RECENTER_CHORD_MASK buttons together
 // RECENTER_TAPS times within RECENTER_WINDOW_MS. Sends one relative move equal to the slider's
 // offset from centre, so a game that has just warped its cursor to the
 // centre ends up aligned with where the slider physically is.
@@ -289,8 +289,8 @@ static void handle_recenter_chord() {
     static uint32_t first_tap = 0;
 
     uint8_t down = 0;
-    for (uint8_t i = 0; i < NUM_BUTTONS; i++) down += btn_pressed[i];
-    bool chord = down >= RECENTER_CHORD_KEYS;
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) if (btn_pressed[i]) down |= (1 << i);
+    bool chord = (down & RECENTER_CHORD_MASK) == RECENTER_CHORD_MASK;
     uint32_t now = millis();
 
     if (chord && !chord_was_down) {
