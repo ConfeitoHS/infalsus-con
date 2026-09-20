@@ -121,12 +121,13 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // going much higher makes the cursor move in 2px steps.
 #define MOUSE_REL_PIXELS_PER_TRAVEL 3840.0f
 
-// Manual re-centre (absolute mode helper): tap SW1+SW6 together this many
-// times within the window to send one relative move equal to the slider's
-// offset from centre. Use right after the game has warped its cursor to
-// the centre so its position matches the slider.
+// Manual re-centre: tap at least RECENTER_CHORD_KEYS buttons together
+// RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
+// equal to the slider's offset from centre. Use right after the game has
+// warped its cursor to the centre so its position matches the slider.
+#define RECENTER_CHORD_KEYS 5
 #define RECENTER_TAPS       3
-#define RECENTER_WINDOW_MS  1000
+#define RECENTER_WINDOW_MS  500
 
 // The re-centre move is sent as small steps spaced out in time, like a
 // hand movement, so games that clamp or discard huge deltas accept it.
