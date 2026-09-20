@@ -92,8 +92,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // HID Report IDs
 // ============================================================
 #define RID_KEYBOARD    1
-#define RID_MOUSE       2   // absolute
-#define RID_MOUSE_REL   3   // relative
+#define RID_MOUSE       2
 
 // ============================================================
 // Tuning Parameters
@@ -108,18 +107,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Invert mouse X direction (set to -1 to reverse, 1 for normal)
 #define MOUSE_INVERT_X      -1
 
-// 1 = send relative mouse movement (Δx), like a normal mouse. Games that
-//     warp the cursor to the centre at song start and then track movement
-//     (in falsus) need this: the game's centre becomes the reference and
-//     no manual re-centring is needed.
-// 0 = send the slider's absolute screen position.
-#define MOUSE_MODE_RELATIVE 1
-
-// Relative mode: how many pixels the full slider travel moves the cursor.
-// 1920 = one screen width on a 1080p display.
-#define MOUSE_REL_PIXELS_PER_TRAVEL 1920.0f
-
-// Absolute mode only: fixed Y position (0-32767). Center = 16384.
+// Fixed absolute Y position (0-32767). Center = 16384.
 #define SLIDER_ABS_Y        16384
 
 // Slider ADC range — with the VDD reference the pot's top end reads
