@@ -113,7 +113,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 //     (in falsus) need this: the game's centre becomes the reference and
 //     no manual re-centring is needed.
 // 0 = send the slider's absolute screen position.
-#define MOUSE_MODE_RELATIVE 0
+#define MOUSE_MODE_RELATIVE 1
 
 // Pixels the full slider travel corresponds to. Used by relative mode and
 // by the manual re-centre move. 1920 = one screen width on 1080p.
