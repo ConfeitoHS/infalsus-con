@@ -45,10 +45,13 @@ typedef struct __attribute__((packed)) {
     uint16_t y;
 } abs_mouse_report_t;
 
-// USB HID report descriptor: keyboard + absolute mouse combo
+// USB HID report descriptor: keyboard + absolute mouse + relative mouse.
+// Both mouse reports are always declared; MOUSE_MODE_RELATIVE picks
+// which one the slider drives.
 uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(RID_KEYBOARD)),
-    ABSMOUSE_REPORT_DESC(HID_REPORT_ID(RID_MOUSE))
+    ABSMOUSE_REPORT_DESC(HID_REPORT_ID(RID_MOUSE)),
+    TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(RID_MOUSE_REL))
 };
 
 // USB HID device
@@ -288,12 +291,30 @@ static void handle_slider() {
         return;
     }
     slider_last_move = now;
+    uint16_t prev_x = slider_last_x;
     slider_last_x = abs_x;
 
+#if MOUSE_MODE_RELATIVE
+    // First sample after (re)connect only sets the reference point
+    if (prev_x == 0xFFFF) return;
+
+    // Convert the change in slider position to pixels, carrying the
+    // fractional remainder so slow moves are not lost to rounding
+    static float rel_carry = 0;
+    float px = ((int32_t)abs_x - (int32_t)prev_x) * (MOUSE_REL_PIXELS_PER_TRAVEL / 32767.0f) + rel_carry;
+    int32_t dx = (int32_t)px;
+    rel_carry = px - dx;
+    while (dx != 0) {
+        int8_t step = (dx > 127) ? 127 : (dx < -127) ? -127 : (int8_t)dx;
+        if (!usb_hid.mouseReport(RID_MOUSE_REL, 0, step, 0, 0, 0)) break;
+        dx -= step;
+    }
+#else
     abs_mouse_report_t report = {};
     report.x = abs_x;
     report.y = SLIDER_ABS_Y;
     usb_hid.sendReport(RID_MOUSE, &report, sizeof(report));
+#endif
 }
 
 // --------------------------------------------------------
