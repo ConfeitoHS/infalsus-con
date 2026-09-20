@@ -55,7 +55,7 @@ nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 �
 - `DEBOUNCE_MS`: 버튼 디바운스 (20)
 - `MOUSE_INVERT_X`: 슬라이더 방향 (-1 / 1)
 - `MOUSE_MODE_RELATIVE`: 1 = 상대 이동(기본), 0 = 절대 좌표
-- `MOUSE_REL_PIXELS_PER_TRAVEL`: 슬라이더 전체 이동에 해당하는 픽셀 수 (1920) — 상대 모드와 수동 센터 보정에 사용
+- `MOUSE_REL_PIXELS_PER_TRAVEL`: 슬라이더 전체 이동에 해당하는 픽셀 수 (3840) — 상대 모드와 수동 센터 보정에 사용
 - `RECENTER_TAPS`, `RECENTER_WINDOW_MS`: 센터 보정 제스처 (3번 / 1000ms)
 - `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
 - `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING_MIN/MAX`, `SLIDER_SPEED_GAIN`: 적응형 노이즈 필터

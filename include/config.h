@@ -117,7 +117,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 
 // Pixels the full slider travel corresponds to. Used by relative mode and
 // by the manual re-centre move. 1920 = one screen width on 1080p.
-#define MOUSE_REL_PIXELS_PER_TRAVEL 1920.0f
+#define MOUSE_REL_PIXELS_PER_TRAVEL 3840.0f
 
 // Manual re-centre (absolute mode helper): tap SW1+SW6 together this many
 // times within the window to send one relative move equal to the slider's
