@@ -31,6 +31,14 @@ pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출
 
 nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
 
+### 리셋 / 진단 펌웨어
+
+```bash
+pio run -e reset -t upload
+```
+
+저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대로 돌리며, 시리얼 모니터에 버튼·슬라이더·케이블 상태를 초당 4번 출력합니다. 배선을 점검하거나 보드를 초기 상태로 되돌릴 때 쓰고, 끝나면 `pio run -t upload`로 일반 펌웨어를 다시 올리세요. UICR(USB 전압 설정 포함)은 건드리지 않습니다.
+
 ## 동작
 
 - 부팅 시 LED1→6이 순서대로 한 번씩 켜집니다 (배선 확인용).
