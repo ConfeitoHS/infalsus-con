@@ -33,6 +33,15 @@ pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출
 
 nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
 
+### 예전 배선(v1) 보드
+
+버튼이 왼쪽(017 020 022 024 100 011), LED가 오른쪽(009 010 111 113 115 002)에 있는 초기 배선 보드는 `nrf52840_v1` 환경으로 빌드합니다:
+
+```bash
+pio run -e nrf52840_v1            # → .pio/build/nrf52840_v1/firmware.uf2
+pio run -e nrf52840_v1 -t upload
+```
+
 ### 리셋 / 진단 펌웨어
 
 ```bash
