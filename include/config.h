@@ -183,6 +183,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Level used by the boot self-test sweep, independent of the saved value
 #define LED_SELFTEST_LEVEL      128
 
+// 1 if the LEDs light when the pin is LOW (LED between 3.3V and the pin,
+// or a PNP driver). With the reference wiring (NPN, LED to 3.3V via 220Ω)
+// leave this at 0. Symptom of a mismatch: every LED on at boot and the
+// pressed button's LED going dark.
+#define LED_ACTIVE_LOW          0
+
 // Fraction of the pot's electrical travel the knob can actually reach
 // (100mm pot in a 60mm housing). Brightness setup maps this span to
 // MIN..255; positions outside it clamp to the nearest end.

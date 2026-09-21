@@ -90,13 +90,17 @@ static const char* BRIGHTNESS_FILE = "/led_brightness";
 static uint32_t brightness_window_end = 0;
 static bool     brightness_window_open = true;
 
+static inline uint8_t led_duty(uint8_t level) {
+    return LED_ACTIVE_LOW ? (uint8_t)(255 - level) : level;
+}
+
 static void led_set(uint8_t idx, bool on) {
-    analogWrite(LED_PINS[idx], on ? led_brightness : 0);
+    analogWrite(LED_PINS[idx], led_duty(on ? led_brightness : 0));
 }
 
 static void leds_all(uint8_t level) {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        analogWrite(LED_PINS[i], level);
+        analogWrite(LED_PINS[i], led_duty(level));
     }
 }
 
@@ -391,9 +395,9 @@ static void release_nfc_pins_as_gpio() {
 // Light each LED in turn at boot so wiring can be checked without pressing anything
 static void led_self_test() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        analogWrite(LED_PINS[i], LED_SELFTEST_LEVEL);
+        analogWrite(LED_PINS[i], led_duty(LED_SELFTEST_LEVEL));
         delay(120);
-        analogWrite(LED_PINS[i], 0);
+        analogWrite(LED_PINS[i], led_duty(0));
     }
 }
 
@@ -471,7 +475,7 @@ void setup() {
     // Configure LED pins as output (off initially)
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(LED_PINS[i], OUTPUT);
-        digitalWrite(LED_PINS[i], LOW);
+        digitalWrite(LED_PINS[i], LED_ACTIVE_LOW ? HIGH : LOW);
     }
 
     InternalFS.begin();
