@@ -409,7 +409,10 @@ static void brightness_mode() {
     memset(active_keys, 0, sizeof(active_keys));
     send_keyboard_report();
 
-    while (all_buttons_down()) {
+    // Bail out after a while so a board with buttons stuck low (e.g. wired
+    // to the NC contact) does not sit here forever with every LED lit.
+    uint32_t entered = millis();
+    while (all_buttons_down() && millis() - entered < BRIGHTNESS_MODE_TIMEOUT_MS) {
         int adc = slider_connected ? read_slider() : -1;
         if (adc >= 0) {
             const float lo = SLIDER_ADC_MAX * SLIDER_USABLE_MIN;
@@ -502,9 +505,14 @@ void setup() {
 // --------------------------------------------------------
 void loop() {
     if (brightness_window_open) {
+        // Arm only once the buttons have been seen released after boot, so
+        // buttons that read pressed permanently cannot trap us in setup mode.
+        static bool armed = false;
+        if (!armed && !any_button_down()) armed = true;
+
         if ((int32_t)(millis() - brightness_window_end) >= 0) {
             brightness_window_open = false;
-        } else if (all_buttons_down()) {
+        } else if (armed && all_buttons_down()) {
             brightness_window_open = false;
             brightness_mode();
             return;

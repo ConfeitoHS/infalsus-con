@@ -193,3 +193,7 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // brightness-setup mode: while held the slider sets the level,
 // releasing saves and exits
 #define BRIGHTNESS_WINDOW_MS    10000
+
+// Give up on brightness-setup mode after this long even if the buttons
+// still read pressed (protects against buttons stuck low)
+#define BRIGHTNESS_MODE_TIMEOUT_MS  30000
