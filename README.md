@@ -29,6 +29,8 @@ pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출
 
 자동 진입이 안 되면 RST를 GND에 두 번 빠르게 터치해 `NICENANO` 드라이브가 뜬 상태에서 업로드하세요. 시리얼 모니터가 열려 있으면 업로드가 실패합니다.
 
+**드래그앤드롭으로 올리기**: `pio run`을 하면 `.pio/build/nrf52840/firmware.uf2`가 함께 생성됩니다. 리셋 두 번 → `NICENANO` 드라이브에 이 파일을 복사하면 끝. 파란 LED가 계속 깜빡이며 드라이브가 다시 뜨면 앱이 안 올라간 것이니 `.uf2` 파일이 맞는지(`.hex`가 아닌지) 확인하세요.
+
 nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
 
 ### 리셋 / 진단 펌웨어
