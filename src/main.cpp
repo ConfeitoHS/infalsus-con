@@ -505,6 +505,10 @@ void setup() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LED_ACTIVE_LOW ? HIGH : LOW);
+#if defined(ARDUINO_ARCH_RP2040)
+        // Default drive is 4mA; LEDs are wired straight to the pin via 220Ω
+        gpio_set_drive_strength(LED_PINS[i], GPIO_DRIVE_STRENGTH_12MA);
+#endif
     }
 
     settings_begin();
