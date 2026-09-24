@@ -5,18 +5,12 @@
 //   2. sweep the LEDs forever so wiring can be checked
 //   3. print button, slider and cable-detect state over USB serial
 //
-// It does not touch UICR (the NFC-pin setting stays as GPIO; erasing UICR
-// would also clear the USB regulator setting and disable USB).
-//
 // Afterwards flash the normal firmware again (pio run -t upload).
 
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
-#include <Adafruit_LittleFS.h>
-#include <InternalFileSystem.h>
+#include <LittleFS.h>
 #include "config.h"
-
-using namespace Adafruit_LittleFS_Namespace;
 
 static bool fs_formatted = false;
 
@@ -27,14 +21,14 @@ void setup() {
         pinMode(BUTTON_PINS[i], INPUT_PULLUP);
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW);
+        gpio_set_drive_strength(LED_PINS[i], GPIO_DRIVE_STRENGTH_12MA);
     }
     pinMode(PIN_SLIDER_DETECT, INPUT_PULLUP);
-    analogReference(AR_VDD4);
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
-    InternalFS.begin();
-    fs_formatted = InternalFS.format();
+    LittleFS.begin();
+    fs_formatted = LittleFS.format();
 
     // Three quick flashes of every LED = settings erased
     for (uint8_t k = 0; k < 3; k++) {
