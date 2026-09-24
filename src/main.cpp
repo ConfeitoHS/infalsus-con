@@ -1,10 +1,44 @@
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
-#include <Adafruit_LittleFS.h>
-#include <InternalFileSystem.h>
 #include "config.h"
 
-using namespace Adafruit_LittleFS_Namespace;
+// ---- Platform layer: settings storage in internal flash ---------------
+#if defined(ARDUINO_ARCH_RP2040)
+  #include <LittleFS.h>
+  static void settings_begin() { LittleFS.begin(); }
+  static bool settings_read(const char* path, uint8_t* v) {
+      File f = LittleFS.open(path, "r");
+      if (!f) return false;
+      bool ok = f.read(v, 1) == 1;
+      f.close();
+      return ok;
+  }
+  static void settings_write(const char* path, uint8_t v) {
+      File f = LittleFS.open(path, "w");
+      if (!f) return;
+      f.write(&v, 1);
+      f.close();
+  }
+#else
+  #include <Adafruit_LittleFS.h>
+  #include <InternalFileSystem.h>
+  using namespace Adafruit_LittleFS_Namespace;
+  static void settings_begin() { InternalFS.begin(); }
+  static bool settings_read(const char* path, uint8_t* v) {
+      File f(InternalFS);
+      if (!f.open(path, FILE_O_READ)) return false;
+      bool ok = f.read(v, 1) == 1;
+      f.close();
+      return ok;
+  }
+  static void settings_write(const char* path, uint8_t v) {
+      InternalFS.remove(path);   // FILE_O_WRITE appends, so start fresh
+      File f(InternalFS);
+      if (!f.open(path, FILE_O_WRITE)) return;
+      f.write(&v, 1);
+      f.close();
+  }
+#endif
 
 // Absolute mouse HID report descriptor.
 // Always use our own to guarantee the report struct matches exactly.
@@ -105,19 +139,12 @@ static void leds_all(uint8_t level) {
 }
 
 static void load_brightness() {
-    File f(InternalFS);
-    if (!f.open(BRIGHTNESS_FILE, FILE_O_READ)) return;
     uint8_t b;
-    if (f.read(&b, 1) == 1) led_brightness = b;
-    f.close();
+    if (settings_read(BRIGHTNESS_FILE, &b)) led_brightness = b;
 }
 
 static void save_brightness() {
-    InternalFS.remove(BRIGHTNESS_FILE);
-    File f(InternalFS);
-    if (!f.open(BRIGHTNESS_FILE, FILE_O_WRITE)) return;
-    f.write(&led_brightness, 1);
-    f.close();
+    settings_write(BRIGHTNESS_FILE, led_brightness);
 }
 
 static bool any_button_down() {
@@ -174,7 +201,7 @@ static bool send_keyboard_report() {
 // report is retried on the next poll cycle.
 // --------------------------------------------------------
 static void handle_buttons() {
-    if (!USBDevice.mounted()) return;
+    if (!TinyUSBDevice.mounted()) return;
 
     uint32_t now = millis();
 
@@ -329,7 +356,7 @@ static void handle_recenter_chord() {
 // ADC 12-bit (0-4095) → HID absolute (0-32767).
 // --------------------------------------------------------
 static void handle_slider() {
-    if (!USBDevice.mounted() || !slider_connected) return;
+    if (!TinyUSBDevice.mounted() || !slider_connected) return;
 
     int adc = read_slider();
     if (adc < 0) return;
@@ -374,11 +401,12 @@ static void handle_slider() {
 }
 
 // --------------------------------------------------------
-// P0.09 / P0.10 are wired to the NFC antenna block by default and
-// ignore GPIO writes until UICR.NFCPINS is cleared. This is a one-time
-// flash write that survives re-flashing; the chip must reset afterward.
+// nRF52840 only: P0.09 / P0.10 are wired to the NFC antenna block by
+// default and ignore GPIO until UICR.NFCPINS is cleared. One-time flash
+// write that survives re-flashing; the chip must reset afterward.
 // --------------------------------------------------------
 static void release_nfc_pins_as_gpio() {
+#if defined(NRF52840_XXAA)
     if ((NRF_UICR->NFCPINS & UICR_NFCPINS_PROTECT_Msk) !=
         (UICR_NFCPINS_PROTECT_NFC << UICR_NFCPINS_PROTECT_Pos)) {
         return;
@@ -390,6 +418,7 @@ static void release_nfc_pins_as_gpio() {
     NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
     while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
     NVIC_SystemReset();
+#endif
 }
 
 // Light each LED in turn at boot so wiring can be checked without pressing anything
@@ -460,11 +489,11 @@ void setup() {
     // HID must be registered before the host enumerates us; anything slow
     // (the LED sweep) has to come after this.
     usb_hid.begin();
-    if (USBDevice.mounted()) {
+    if (TinyUSBDevice.mounted()) {
         // Host already enumerated without HID — force re-enumeration
-        USBDevice.detach();
+        TinyUSBDevice.detach();
         delay(10);
-        USBDevice.attach();
+        TinyUSBDevice.attach();
     }
 
     // Configure button pins with internal pull-up
@@ -478,14 +507,16 @@ void setup() {
         digitalWrite(LED_PINS[i], LED_ACTIVE_LOW ? HIGH : LOW);
     }
 
-    InternalFS.begin();
+    settings_begin();
     load_brightness();
 
     led_self_test();
 
     // Configure slider ADC (12-bit). VDD reference makes the reading
     // ratiometric to the pot's supply, so LED-induced rail dips cancel out.
+#if !defined(ARDUINO_ARCH_RP2040)
     analogReference(AR_VDD4);
+#endif
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
@@ -497,7 +528,7 @@ void setup() {
     Serial.begin(115200);
 
     // Wait for USB to be ready
-    while (!USBDevice.mounted()) {
+    while (!TinyUSBDevice.mounted()) {
         delay(1);
     }
 

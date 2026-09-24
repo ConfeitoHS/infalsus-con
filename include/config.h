@@ -26,15 +26,59 @@
 //         └──────────┘
 // ============================================================
 
-// Slider (potentiometer) wiper — board label 029 (P0.29, AIN5)
-#define PIN_SLIDER      A1
+// ============================================================
+// Pin numbers by board. Wiring is by PHYSICAL Pro Micro position, so the
+// same case/harness fits either board; only the GPIO numbers differ.
+//
+//   Pro Micro position :  RP2040 Pro Micro  |  nice!nano (Arduino idx / nRF)
+//   left  D2..D9       :  GP2..GP9          |  2..9  / P0.17 P0.20 P0.22 P0.24 P1.00 P0.11 P1.04 P1.06
+//   right A3 A2 A1 A0  :  GP29 28 27 26     |  17 16 15 14 / P0.31 P0.29 P0.02 P1.15
+//   right D15 D14      :  GP22 GP20         |  13 12 / P1.13 P1.11
+//   right D16 D10      :  GP23 GP21         |  11 10 / P0.10 P0.09
+// ============================================================
+#if defined(ARDUINO_ARCH_RP2040)
+  #define PIN_SLIDER          28  // A2 position — GP28 / ADC2
+  #define PIN_SLIDER_DETECT   29  // A3 position — GP29
+#else
+  // Slider (potentiometer) wiper — board label 029 (P0.29, AIN5)
+  #define PIN_SLIDER          A1
+  // Slider-unit cable detect — board label 031 (P0.31). Wired to the 2nd
+  // ring contact of the 4-pole jack; the plug's sleeve shorts it to GND
+  // whenever a cable is inserted, so LOW = connected.
+  #define PIN_SLIDER_DETECT   17
+#endif
 
-// Slider-unit cable detect — board label 031 (P0.31). Wired to the 2nd
-// ring contact of the 4-pole jack; the plug's sleeve shorts it to GND
-// whenever a cable is inserted, so LOW = connected.
-#define PIN_SLIDER_DETECT   17
-
-#if WIRING_V1
+#if defined(ARDUINO_ARCH_RP2040)
+  #if WIRING_V1
+  // ---- Wiring v1 on RP2040: buttons LEFT (D2-D7), LEDs RIGHT
+  #define PIN_BTN_1  2
+  #define PIN_BTN_2  3
+  #define PIN_BTN_3  4
+  #define PIN_BTN_4  5
+  #define PIN_BTN_5  6
+  #define PIN_BTN_6  7
+  #define PIN_LED_1  21  // D10 position
+  #define PIN_LED_2  23  // D16 position
+  #define PIN_LED_3  20  // D14 position
+  #define PIN_LED_4  22  // D15 position
+  #define PIN_LED_5  26  // A0 position
+  #define PIN_LED_6  27  // A1 position
+  #else
+  // ---- Wiring v2 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
+  #define PIN_BTN_1  27  // A1 position
+  #define PIN_BTN_2  26  // A0 position
+  #define PIN_BTN_3  22  // D15 position
+  #define PIN_BTN_4  20  // D14 position
+  #define PIN_BTN_5  23  // D16 position
+  #define PIN_BTN_6  21  // D10 position
+  #define PIN_LED_1  4
+  #define PIN_LED_2  5
+  #define PIN_LED_3  6
+  #define PIN_LED_4  7
+  #define PIN_LED_5  8
+  #define PIN_LED_6  9
+  #endif
+#elif WIRING_V1
 // ---- Wiring v1 (older builds): buttons on the LEFT column, LEDs on the RIGHT
 // Build with:  pio run -e nrf52840_v1 [-t upload]
 #define PIN_BTN_1       2   // D2  — P0.17
@@ -65,7 +109,8 @@
 //   pin → 4.7kΩ → 2N2222 base; emitter → GND;
 //   collector → LED(-) ; LED(+) → 220Ω → 3.3V
 // (Driving the LED straight from the pin also works with a 1kΩ resistor,
-// but nRF52840 GPIO is limited to ~2mA/pin, ~15mA total.)
+// but nRF52840 GPIO is limited to ~2mA/pin, ~15mA total. RP2040 GPIO can
+// drive 220Ω LEDs directly.)
 #define PIN_LED_1       4   // D4 — P0.22  (for Button 1)
 #define PIN_LED_2       5   // D5 — P0.24  (for Button 2)
 #define PIN_LED_3       6   // D6 — P1.00  (for Button 3)

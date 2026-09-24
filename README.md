@@ -1,6 +1,6 @@
 # infalsus-con
 
-nice!nano v2 (nRF52840) 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X, 절대 좌표)를 지원하고, 버튼마다 LED가 켜집니다.
+nice!nano v2 (nRF52840) 또는 RP2040 Pro Micro 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X, 절대 좌표)를 지원하고, 버튼마다 LED가 켜집니다.
 
 ## 하드웨어
 
@@ -12,12 +12,12 @@ nice!nano v2 (nRF52840) 기반 USB HID 게임 컨트롤러. 버튼 6개(키보�
 
 핀 배정과 배선도는 `include/config.h` 상단 주석을 보세요.
 
-| 부품 | 보드 라벨 | 키 |
-|---|---|---|
-| SW1–SW6 | 002 115 113 111 010 009 (오른쪽) | Shift A S D F Space |
-| LED1–LED6 | 022 024 100 011 104 106 (왼쪽) | (같은 순서) |
-| 슬라이더 | 029 | 마우스 X |
-| 슬라이더 케이블 감지 | 031 | 4극 잭 R2 (꽂히면 GND) |
+| 부품 | Pro Micro 위치 | nice!nano 라벨 | RP2040 GPIO | 키 |
+|---|---|---|---|---|
+| SW1–SW6 | A1 A0 D15 D14 D16 D10 (오른쪽) | 002 115 113 111 010 009 | 27 26 22 20 23 21 | Shift A S D F Space |
+| LED1–LED6 | D4–D9 (왼쪽) | 022 024 100 011 104 106 | 4–9 | (같은 순서) |
+| 슬라이더 | A2 | 029 | 28 | 마우스 X |
+| 케이블 감지 | A3 | 031 | 29 | 4극 잭 R2 (꽂히면 GND) |
 
 ## 빌드 & 업로드
 
@@ -32,6 +32,19 @@ pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출
 **드래그앤드롭으로 올리기**: `pio run`을 하면 `.pio/build/nrf52840/firmware.uf2`가 함께 생성됩니다. 리셋 두 번 → `NICENANO` 드라이브에 이 파일을 복사하면 끝. 파란 LED가 계속 깜빡이며 드라이브가 다시 뜨면 앱이 안 올라간 것이니 `.uf2` 파일이 맞는지(`.hex`가 아닌지) 확인하세요.
 
 nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
+
+### RP2040 Pro Micro 보드
+
+Sea-Picro, SparkFun Pro Micro RP2040, 알리 클론 등 **Pro Micro 풋프린트 RP2040** 보드는 같은 케이스·배선을 그대로 쓰고 `rp2040` 환경으로 빌드합니다. 핀은 물리 위치 기준으로 대응돼 있습니다 (`include/config.h` 상단 표).
+
+```bash
+pio run -e rp2040                 # → .pio/build/rp2040/firmware.uf2
+pio run -e rp2040 -t upload
+```
+
+드래그앤드롭: BOOTSEL을 누른 채 USB를 꽂으면 `RPI-RP2` 드라이브가 뜨고, 거기에 `firmware.uf2`를 복사합니다. 예전 배선 보드는 `rp2040_v1`.
+
+RP2040은 GPIO 전류가 넉넉해서(핀당 12mA) LED를 트랜지스터 없이 **220Ω으로 직결**해도 됩니다. 기존 트랜지스터 기판도 그대로 동작합니다.
 
 ### 예전 배선(v1) 보드
 
