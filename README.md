@@ -1,27 +1,28 @@
-# infalsus-con
+# infalsus-con v1.1
 
-**v1.1** — RP2040 Pro Micro 기반 USB HID 게임 컨트롤러 (v1.0은 nice!nano/nRF52840, 지금도 지원). 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X)를 지원하고, 버튼마다 LED가 켜집니다.
+RP2040 Pro Micro 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X)를 지원하고, 버튼마다 LED가 켜집니다.
+
+> v1.0(nice!nano / nRF52840)은 `v1.0-nrf52840` 브랜치에 있습니다.
 
 ## 하드웨어
 
-- **MCU**: RP2040 Pro Micro (Sea-Picro · SparkFun Pro Micro RP2040 · 클론). v1.0: nice!nano v2 / SuperMini nRF52840
-- **버튼**: 택트 스위치 ×6 → 핀과 GND 사이 (내부 풀업)
-- **LED**: ×6, GPIO → 220Ω → LED → GND 직결 (v1.0 nice!nano는 2N2222 경유)
-- **슬라이더**: 10kΩ 리니어 포텐셔미터, 양 끝 3.3V/GND, 가운데 핀 → ADC
+- **MCU**: Pro Micro 풋프린트 RP2040 — Sea-Picro, SparkFun Pro Micro RP2040, 알리 클론 (4MB 플래시면 충분)
+- **버튼**: 마이크로스위치 ×6 → 핀과 GND 사이 (내부 풀업, COM·NO 단자 사용)
+- **LED**: ×6, GPIO → 220Ω → LED → GND 직결 (GPIO 12mA 드라이브)
+- **슬라이더**: 10kΩ 리니어 포텐셔미터, 양 끝 3.3V/GND, 가운데 핀 → GP28. 3.5mm 4극 잭으로 분리, R2로 케이블 감지
 - **콘덴서**: 100nF (슬라이더 신호–GND), 10µF (3.3V–GND)
+- **RST**: 택트 스위치 → GND
 
-핀 배정과 배선도는 `include/config.h` 상단 주석을 보세요.
+| 부품 | Pro Micro 위치 | GPIO | 키 |
+|---|---|---|---|
+| SW1–SW6 | A1 A0 D15 D14 D16 D10 (오른쪽) | 27 26 22 20 23 21 | Shift A S D F Space |
+| LED1–LED6 | D4–D9 (왼쪽) | 4–9 | (같은 순서) |
+| 슬라이더 | A2 | 28 (ADC2) | 마우스 X |
+| 케이블 감지 | A3 | 29 | 4극 잭 R2 (꽂히면 GND) |
 
-| 부품 | Pro Micro 위치 | nice!nano 라벨 | RP2040 GPIO | 키 |
-|---|---|---|---|---|
-| SW1–SW6 | A1 A0 D15 D14 D16 D10 (오른쪽) | 002 115 113 111 010 009 | 27 26 22 20 23 21 | Shift A S D F Space |
-| LED1–LED6 | D4–D9 (왼쪽) | 022 024 100 011 104 106 | 4–9 | (같은 순서) |
-| 슬라이더 | A2 | 029 | 28 | 마우스 X |
-| 케이블 감지 | A3 | 031 | 29 | 4극 잭 R2 (꽂히면 GND) |
+배선도: `docs/wiring-ko.html` / `docs/infalsus-wiring-ko.pdf` (영어판 `-en`).
 
 ## 빌드 & 업로드
-
-기본 환경은 `rp2040` (v1.1)입니다.
 
 ```bash
 pio run              # 빌드 → .pio/build/rp2040/firmware.uf2
@@ -29,20 +30,7 @@ pio run -t upload    # 업로드
 pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출력
 ```
 
-드래그앤드롭: BOOTSEL을 누른 채 USB를 꽂으면 `RPI-RP2` 드라이브가 뜨고, 거기에 `firmware.uf2`를 복사합니다. 시리얼 모니터가 열려 있으면 업로드가 실패합니다.
-
-v1.0(nice!nano) 보드는 `pio run -e nrf52840 [-t upload]`. RST를 GND에 두 번 빠르게 터치하면 `NICENANO` 드라이브가 뜨고 `.pio/build/nrf52840/firmware.uf2`를 복사하면 됩니다.
-
-nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
-
-### 예전 배선(wiring v1) 보드
-
-버튼이 왼쪽(D2–D7), LED가 오른쪽(D10 D16 D14 D15 A0 A1)에 있는 초기 배선 보드는 `_v1` 환경으로 빌드합니다:
-
-```bash
-pio run -e rp2040_v1              # RP2040
-pio run -e nrf52840_v1            # nice!nano
-```
+드래그앤드롭: BOOTSEL을 누른 채 USB를 꽂으면 `RPI-RP2` 드라이브가 뜨고, 거기에 `firmware.uf2`를 복사하면 끝. 시리얼 모니터가 열려 있으면 업로드가 실패합니다.
 
 ### 리셋 / 진단 펌웨어
 
@@ -50,7 +38,7 @@ pio run -e nrf52840_v1            # nice!nano
 pio run -e reset -t upload
 ```
 
-nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대로 돌리며, 시리얼 모니터에 버튼·슬라이더·케이블 상태를 초당 4번 출력합니다. 배선을 점검하거나 보드를 초기 상태로 되돌릴 때 쓰고, 끝나면 일반 펌웨어를 다시 올리세요. UICR(USB 전압 설정 포함)은 건드리지 않습니다.
+저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대로 돌리며, 시리얼 모니터에 버튼·슬라이더·케이블 상태를 초당 4번 출력합니다. 배선을 점검하거나 보드를 초기 상태로 되돌릴 때 쓰고, 끝나면 일반 펌웨어를 다시 올리세요.
 
 ## 동작
 
@@ -84,4 +72,4 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 - `SLIDER_WAKE_STEP`, `SLIDER_REST_MS`: 정지 판정 후 다시 움직임으로 인정하는 최소 이동(64)과 정지 판정 시간(150ms)
 - `POLL_INTERVAL_MS`: 폴링 주기 (1)
 - `BRIGHTNESS_WINDOW_MS`: 밝기 설정 모드 진입 가능 시간 (10000)
-- `LED_ACTIVE_LOW`: LED가 핀 LOW에서 켜지는 배선이면 1 (부팅 시 전부 켜지고 누르면 꺼지는 증상)
+- `LED_ACTIVE_LOW`: LED가 핀 LOW에서 켜지는 배선이면 1

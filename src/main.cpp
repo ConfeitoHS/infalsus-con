@@ -2,43 +2,22 @@
 #include <Adafruit_TinyUSB.h>
 #include "config.h"
 
-// ---- Platform layer: settings storage in internal flash ---------------
-#if defined(ARDUINO_ARCH_RP2040)
-  #include <LittleFS.h>
-  static void settings_begin() { LittleFS.begin(); }
-  static bool settings_read(const char* path, uint8_t* v) {
-      File f = LittleFS.open(path, "r");
-      if (!f) return false;
-      bool ok = f.read(v, 1) == 1;
-      f.close();
-      return ok;
-  }
-  static void settings_write(const char* path, uint8_t v) {
-      File f = LittleFS.open(path, "w");
-      if (!f) return;
-      f.write(&v, 1);
-      f.close();
-  }
-#else
-  #include <Adafruit_LittleFS.h>
-  #include <InternalFileSystem.h>
-  using namespace Adafruit_LittleFS_Namespace;
-  static void settings_begin() { InternalFS.begin(); }
-  static bool settings_read(const char* path, uint8_t* v) {
-      File f(InternalFS);
-      if (!f.open(path, FILE_O_READ)) return false;
-      bool ok = f.read(v, 1) == 1;
-      f.close();
-      return ok;
-  }
-  static void settings_write(const char* path, uint8_t v) {
-      InternalFS.remove(path);   // FILE_O_WRITE appends, so start fresh
-      File f(InternalFS);
-      if (!f.open(path, FILE_O_WRITE)) return;
-      f.write(&v, 1);
-      f.close();
-  }
-#endif
+// ---- Settings storage in internal flash (LittleFS) ----------------------
+#include <LittleFS.h>
+static void settings_begin() { LittleFS.begin(); }
+static bool settings_read(const char* path, uint8_t* v) {
+    File f = LittleFS.open(path, "r");
+    if (!f) return false;
+    bool ok = f.read(v, 1) == 1;
+    f.close();
+    return ok;
+}
+static void settings_write(const char* path, uint8_t v) {
+    File f = LittleFS.open(path, "w");
+    if (!f) return;
+    f.write(&v, 1);
+    f.close();
+}
 
 // Absolute mouse HID report descriptor.
 // Always use our own to guarantee the report struct matches exactly.
@@ -400,27 +379,6 @@ static void handle_slider() {
 #endif
 }
 
-// --------------------------------------------------------
-// nRF52840 only: P0.09 / P0.10 are wired to the NFC antenna block by
-// default and ignore GPIO until UICR.NFCPINS is cleared. One-time flash
-// write that survives re-flashing; the chip must reset afterward.
-// --------------------------------------------------------
-static void release_nfc_pins_as_gpio() {
-#if defined(NRF52840_XXAA)
-    if ((NRF_UICR->NFCPINS & UICR_NFCPINS_PROTECT_Msk) !=
-        (UICR_NFCPINS_PROTECT_NFC << UICR_NFCPINS_PROTECT_Pos)) {
-        return;
-    }
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NRF_UICR->NFCPINS &= ~UICR_NFCPINS_PROTECT_Msk;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NVIC_SystemReset();
-#endif
-}
-
 // Light each LED in turn at boot so wiring can be checked without pressing anything
 static void led_self_test() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
@@ -484,8 +442,6 @@ static void brightness_mode() {
 // Setup
 // --------------------------------------------------------
 void setup() {
-    release_nfc_pins_as_gpio();
-
     // HID must be registered before the host enumerates us; anything slow
     // (the LED sweep) has to come after this.
     usb_hid.begin();
@@ -505,10 +461,8 @@ void setup() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LED_ACTIVE_LOW ? HIGH : LOW);
-#if defined(ARDUINO_ARCH_RP2040)
         // Default drive is 4mA; LEDs are wired straight to the pin via 220Ω
         gpio_set_drive_strength(LED_PINS[i], GPIO_DRIVE_STRENGTH_12MA);
-#endif
     }
 
     settings_begin();
@@ -516,11 +470,7 @@ void setup() {
 
     led_self_test();
 
-    // Configure slider ADC (12-bit). VDD reference makes the reading
-    // ratiometric to the pot's supply, so LED-induced rail dips cancel out.
-#if !defined(ARDUINO_ARCH_RP2040)
-    analogReference(AR_VDD4);
-#endif
+    // Configure slider ADC (12-bit)
     analogReadResolution(12);
     pinMode(PIN_SLIDER, INPUT);
 
