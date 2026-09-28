@@ -12,7 +12,8 @@
 #define FW_VERSION      "1.3.0"
 #define PROTO_VERSION   1
 #define BOARD_ID        "rp2040-promicro"   // MCU board family
-#define HW_REV          "1.1"               // hardware revision = wiring: buttons right, LEDs left
+#define HW_REV          "1.1"               // hardware version: any wiring or part change bumps it
+                                            // (1.1 = buttons right, LEDs left, pot slider)
 #define SLIDER_TYPE     "pot"               // slide potentiometer on the 4-pole jack
 
 // ============================================================
