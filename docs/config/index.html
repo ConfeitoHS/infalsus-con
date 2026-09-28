@@ -77,6 +77,13 @@ pre.log {
   max-height: 220px; overflow: auto; background: var(--chip); border-radius: 8px;
   padding: 10px; font-size: 12px; margin: 10px 0 0; white-space: pre-wrap; word-break: break-all;
 }
+.posbar { position: relative; height: 12px; background: var(--chip); border-radius: 6px; margin: 12px 0 6px; }
+.posbar .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.mk { position: absolute; top: -4px; width: 4px; height: 20px; border-radius: 2px; transform: translateX(-50%); }
+.mk-center { background: var(--accent); }
+.mk-pos { background: var(--warn); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .hidden { display: none !important; }
 footer { color: var(--muted); font-size: 13px; margin-top: 20px; }
 code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
@@ -170,6 +177,9 @@ const STR = {
     px_help: "슬라이더를 끝에서 끝까지 움직였을 때 마우스가 가는 픽셀 수. 클수록 조금만 밀어도 많이 움직입니다. 기본 3840.",
     reverse_label: "슬라이더 방향 반전",
     reverse_help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
+    center_label: "슬라이더 센터 위치",
+    center_help: "센터 보정 조합(A S D F + Shift 또는 Space를 4번)이 기준으로 삼는 슬라이더 위치입니다. 슬라이더를 하우징 한가운데에 두고 아래 버튼을 누르거나, 막대로 미세 조정하세요.",
+    center_capture: "지금 슬라이더 위치를 센터로", center_now: "현재 위치", center_set: "센터", center_unknown: "슬라이더 연결 안 됨",
     reverse_toggle: "반전", on: "켜짐", off: "꺼짐",
     dirty: "저장 안 된 변경 있음", saved: "컨트롤러에 저장됨",
     no_serial: "이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요.",
@@ -202,6 +212,9 @@ const STR = {
     px_help: "How many pixels the mouse moves when the slider goes from one end to the other. Higher values move the cursor further for the same push. Default 3840.",
     reverse_label: "Reverse slider direction",
     reverse_help: "Turn this on if the cursor moves left when you push the slider right.",
+    center_label: "Slider centre position",
+    center_help: "The slider position the re-centre chord (A S D F + Shift or Space, tapped 4 times) treats as the centre. Put the slider in the middle of the housing and press the button below, or fine-tune it with the bar.",
+    center_capture: "Use the current slider position", center_now: "Current position", center_set: "Centre", center_unknown: "Slider not connected",
     reverse_toggle: "Reverse", on: "On", off: "Off",
     dirty: "Unsaved changes", saved: "Saved on the controller",
     no_serial: "This browser does not support Web Serial. Open this page in Chrome or Edge.",
@@ -234,6 +247,9 @@ const STR = {
     px_help: "滑条从一端移到另一端时鼠标移动的像素数。数值越大，同样的推动距离光标移动越远。默认 3840。",
     reverse_label: "反转滑条方向",
     reverse_help: "如果向右推滑条时光标向左移动，请打开此项。",
+    center_label: "滑条中心位置",
+    center_help: "居中组合键（A S D F + Shift 或 Space，连按 4 次）所使用的滑条中心位置。把滑条放在外壳正中间后按下方按钮，或用滑块微调。",
+    center_capture: "将当前滑条位置设为中心", center_now: "当前位置", center_set: "中心", center_unknown: "滑条未连接",
     reverse_toggle: "反转", on: "开", off: "关",
     dirty: "有未保存的更改", saved: "已保存到控制器",
     no_serial: "此浏览器不支持 Web Serial。请使用 Chrome 或 Edge 打开本页面。",
@@ -266,6 +282,9 @@ const STR = {
     px_help: "スライダーを端から端まで動かしたときにマウスが動くピクセル数。大きいほど同じ動きでカーソルが大きく動きます。初期値 3840。",
     reverse_label: "スライダーの向きを反転",
     reverse_help: "スライダーを右に動かしたときにカーソルが左に動く場合はオンにしてください。",
+    center_label: "スライダーの中心位置",
+    center_help: "センター補正（A S D F + Shift または Space を 4 回）が基準にするスライダー位置です。スライダーをケースの真ん中に置いて下のボタンを押すか、バーで微調整してください。",
+    center_capture: "現在のスライダー位置を中心にする", center_now: "現在位置", center_set: "中心", center_unknown: "スライダー未接続",
     reverse_toggle: "反転", on: "オン", off: "オフ",
     dirty: "未保存の変更あり", saved: "コントローラーに保存済み",
     no_serial: "このブラウザーは Web Serial に対応していません。Chrome または Edge で開いてください。",
@@ -322,7 +341,14 @@ const CONTROLS = {
   brightness: { kind: "range", step: 1, format: v => `${v} / 255 (${Math.round(v / 2.55)}%)` },
   px: { kind: "number", step: 10, presets: [1920, 2880, 3840, 5760, 7680], format: v => `${v} px` },
   reverse: { kind: "toggle", format: v => t(v ? "on" : "off") },
+  center: { kind: "center", step: 1, format: v => fmtPct(v) },
 };
+
+// 0-32767 slider units as % of travel, with the offset from the middle
+function fmtPct(v) {
+  const pct = v / 32767 * 100, d = pct - 50;
+  return `${pct.toFixed(1)}% (${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)})`;
+}
 
 // ---------------------------------------------------------------------------
 // Transports: real Web Serial port, or an in-page simulation of the firmware
@@ -380,31 +406,36 @@ class SerialTransport {
 class DemoTransport {
   constructor() {
     this.onLine = () => {}; this.onClose = () => {};
-    this.defaults = { brightness: 255, px: 3840, reverse: 0 };
-    this.saved = { brightness: 180, px: 3840, reverse: 0 };
+    this.defaults = { brightness: 255, px: 3840, reverse: 0, center: 16384 };
+    this.saved = { brightness: 180, px: 3840, reverse: 0, center: 16384 };
+    this.t0 = Date.now();
     this.cfg = { ...this.saved };
   }
   async open() { setTimeout(() => this.onLine("slider: connected"), 50); }
   async close() {}
   emit(obj) { setTimeout(() => this.onLine(JSON.stringify(obj)), 40); }
   dirty() { return JSON.stringify(this.cfg) !== JSON.stringify(this.saved); }
+  // The demo slider drifts slowly around 53% so the position marker moves
+  pos() { return Math.round(17400 + 6000 * Math.sin((Date.now() - this.t0) / 1400)); }
   settings(type) { return { ok: true, type, settings: { ...this.cfg }, dirty: this.dirty() }; }
   async write(line) {
     const [cmd, key, val] = line.trim().split(/\s+/);
     if (cmd === "info") return this.emit({
       ok: true, type: "info", name: "infalsus-con", fw: "1.3.0", proto: 1,
       board: "rp2040-promicro", hw: "1.1", slider: "pot", buttons: 6,
-      caps: ["brightness", "px", "reverse"],
-      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1] },
+      caps: ["brightness", "px", "reverse", "center"],
+      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767] },
       defaults: { ...this.defaults }, settings: { ...this.cfg }, dirty: this.dirty(),
     });
     if (cmd === "get") return this.emit(this.settings("settings"));
+    if (cmd === "pos") return this.emit({ ok: true, type: "pos", pos: this.pos(), center: this.cfg.center });
+    if (cmd === "center") { this.cfg.center = this.pos(); return this.emit(this.settings("settings")); }
     if (cmd === "save") { this.saved = { ...this.cfg }; return this.emit(this.settings("saved")); }
     if (cmd === "revert") { this.cfg = { ...this.saved }; return this.emit(this.settings("settings")); }
     if (cmd === "defaults") { this.cfg = { ...this.defaults }; return this.emit(this.settings("settings")); }
     if (cmd === "set") {
       const v = Number(val);
-      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1] }[key];
+      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767] }[key];
       if (!lim) return this.emit({ ok: false, error: "unknown setting" });
       if (!Number.isInteger(v) || v < lim[0] || v > lim[1]) return this.emit({ ok: false, error: key + " out of range" });
       this.cfg[key] = v;
@@ -428,8 +459,8 @@ class Device {
     if (!line.startsWith("{")) { log("  " + line); return; }
     let msg;
     try { msg = JSON.parse(line); } catch (_) { log("  " + line); return; }
-    log("← " + line);
     const job = this.inflight;
+    if (!job || !job.quiet) log("← " + line);
     if (!job) return;
     clearTimeout(job.timer);
     this.inflight = null;
@@ -437,13 +468,13 @@ class Device {
     this.pump();
   }
   // key: commands with the same key replace a still-queued one (slider drags)
-  send(line, key = null) {
+  send(line, key = null, quiet = false) {
     return new Promise((resolve, reject) => {
       if (key) {
         const q = this.queue.find(j => j.key === key);
         if (q) { q.resolve(null); Object.assign(q, { line, resolve, reject }); return; }
       }
-      this.queue.push({ line, resolve, reject, key });
+      this.queue.push({ line, resolve, reject, key, quiet });
       this.pump();
     });
   }
@@ -457,7 +488,7 @@ class Device {
       job.reject(new Error("timeout"));
       this.pump();
     }, 2000);
-    log("→ " + job.line);
+    if (!job.quiet) log("→ " + job.line);
     try { await this.t.write(job.line); }
     catch (e) { clearTimeout(job.timer); this.inflight = null; job.reject(e); this.pump(); }
   }
@@ -603,6 +634,20 @@ function renderSettings() {
         }
         wrap.append(p);
       }
+    } else if (def.kind === "center") {
+      const r = el("input", { type: "range", id: "ctl-" + key, min, max, step: def.step });
+      r.addEventListener("pointerdown", () => { dragging = key; });
+      r.addEventListener("input", () => { showValue(key, +r.value); setMarker("mk-center", +r.value); sendSet(key, +r.value); });
+      r.addEventListener("change", () => { dragging = null; sendSet(key, +r.value); });
+      const bar = el("div", { className: "posbar" });
+      bar.innerHTML = '<span class="mid"></span><span class="mk mk-center" id="mk-center"></span><span class="mk mk-pos" id="mk-pos" style="display:none"></span>';
+      const leg = el("div", { className: "legend" });
+      leg.innerHTML = `<span><i style="background:var(--accent)"></i>${t("center_set")}</span>` +
+                      `<span><i style="background:var(--warn)"></i>${t("center_now")}: <b id="pos-now">–</b></span>`;
+      const b = el("button", { type: "button", textContent: t("center_capture") });
+      b.style.marginTop = "10px";
+      b.addEventListener("click", () => command("center"));
+      wrap.append(bar, leg, r, b);
     } else if (def.kind === "toggle") {
       const lab = el("label", { className: "switch" });
       const c = el("input", { type: "checkbox", id: "ctl-" + key });
@@ -637,6 +682,7 @@ function applySettings(settings, dirty) {
     if (c && c.type === "checkbox") c.checked = !!v;
     else if (c) c.value = v;
     if (n && document.activeElement !== n) n.value = v;
+    if (key === "center") setMarker("mk-center", v);
   }
   const st = $("save-state");
   lastDirty = !!dirty;
@@ -662,6 +708,30 @@ function sendSet(key, v) { command(`set ${key} ${v}`, "set:" + key); }
 function el(tag, props) { const e = document.createElement(tag); Object.assign(e, props); return e; }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+
+function setMarker(id, v) {
+  const m = $(id);
+  if (!m) return;
+  if (v < 0) { m.style.display = "none"; return; }
+  m.style.display = "";
+  m.style.left = (v / 32767 * 100) + "%";
+}
+
+// Live slider position for the centre control (quiet: not written to the log)
+let polling = false;
+setInterval(async () => {
+  if (!device || !info || !info.caps.includes("center") || document.hidden || polling || dragging) return;
+  polling = true;
+  try {
+    const r = await device.send("pos", "pos", true);
+    if (r && r.type === "pos") {
+      setMarker("mk-pos", r.pos);
+      const now = $("pos-now");
+      if (now) now.textContent = r.pos < 0 ? t("center_unknown") : fmtPct(r.pos);
+    }
+  } catch (_) { /* a missed poll is harmless */ }
+  polling = false;
+}, 200);
 
 function renderSaveState() {
   const st = $("save-state");

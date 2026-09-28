@@ -23,14 +23,22 @@ static void settings_write(const char* path, const void* buf, size_t len) {
 // Adding a field: append it, bump SETTINGS_VERSION and give it a default in
 // settings_defaults(); an older record is then ignored and defaults apply.
 #define SETTINGS_MAGIC    0x49   // 'I'
-#define SETTINGS_VERSION  1
+#define SETTINGS_VERSION  2
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
     uint8_t  version;
     uint8_t  brightness;     // LED PWM level 0-255
     uint8_t  reverse;        // 1 = flip the built-in slider direction
     uint16_t px_per_travel;  // pixels for the full slider travel
+    uint16_t center;         // slider position (0-32767, before the direction
+                             // flip) that the re-centre chord treats as centre
 } settings_t;
+
+// Record written by firmware 1.3.0 builds before "center" existed
+typedef struct __attribute__((packed)) {
+    uint8_t  magic, version, brightness, reverse;
+    uint16_t px_per_travel;
+} settings_v1_t;
 
 static const char* SETTINGS_FILE   = "/settings";
 static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // firmware 1.2 and older
@@ -44,20 +52,31 @@ static void settings_defaults(settings_t& s) {
     s.brightness    = LED_BRIGHTNESS_DEFAULT;
     s.reverse       = 0;
     s.px_per_travel = MOUSE_REL_PIXELS_PER_TRAVEL;
+    s.center        = SLIDER_CENTER_DEFAULT;
 }
 
 static bool settings_valid(const settings_t& s) {
     return s.magic == SETTINGS_MAGIC && s.version == SETTINGS_VERSION &&
            s.reverse <= 1 &&
-           s.px_per_travel >= PX_PER_TRAVEL_MIN && s.px_per_travel <= PX_PER_TRAVEL_MAX;
+           s.px_per_travel >= PX_PER_TRAVEL_MIN && s.px_per_travel <= PX_PER_TRAVEL_MAX &&
+           s.center <= 32767;
 }
 
 static void load_settings() {
     settings_t s;
     if (!settings_read(SETTINGS_FILE, &s, sizeof(s)) || !settings_valid(s)) {
         settings_defaults(s);
-        uint8_t b;   // keep a brightness saved by an older firmware
-        if (settings_read(LEGACY_BRIGHTNESS_FILE, &b, 1)) s.brightness = b;
+        settings_v1_t v1;
+        uint8_t b;
+        if (settings_read(SETTINGS_FILE, &v1, sizeof(v1)) &&
+            v1.magic == SETTINGS_MAGIC && v1.version == 1) {
+            s.brightness    = v1.brightness;       // keep the older record's values
+            s.reverse       = v1.reverse <= 1 ? v1.reverse : 0;
+            if (v1.px_per_travel >= PX_PER_TRAVEL_MIN && v1.px_per_travel <= PX_PER_TRAVEL_MAX)
+                s.px_per_travel = v1.px_per_travel;
+        } else if (settings_read(LEGACY_BRIGHTNESS_FILE, &b, 1)) {
+            s.brightness = b;                      // firmware 1.2 and older
+        }
     }
     cfg = cfg_saved = s;
 }
@@ -71,6 +90,9 @@ static bool settings_dirty() { return memcmp(&cfg, &cfg_saved, sizeof(cfg)) != 0
 
 // Effective slider direction: the wiring's built-in direction, optionally flipped
 static inline bool invert_x() { return (MOUSE_INVERT_X < 0) != (cfg.reverse != 0); }
+
+// Centre in the same (direction-applied) units as slider_last_x
+static inline int32_t center_abs() { return invert_x() ? 32767 - cfg.center : cfg.center; }
 
 // Absolute mouse HID report descriptor.
 // Always use our own to guarantee the report struct matches exactly.
@@ -358,10 +380,10 @@ static void handle_recenter_chord() {
             taps = 0;
             if (slider_last_x != 0xFFFF) {
                 Serial.print("recenter: dx units=");
-                Serial.println((int32_t)slider_last_x - 16384);
+                Serial.println((int32_t)slider_last_x - center_abs());
                 // Spread the move over many small steps so it looks like a
                 // hand movement rather than one huge jump the game may reject
-                send_rel_dx((int32_t)slider_last_x - 16384, RECENTER_STEP_PX, RECENTER_STEP_MS);
+                send_rel_dx((int32_t)slider_last_x - center_abs(), RECENTER_STEP_PX, RECENTER_STEP_MS);
                 for (uint8_t k = 0; k < 2; k++) {
                     leds_all(LED_SELFTEST_LEVEL); delay(60);
                     leds_all(0);                  delay(60);
@@ -497,6 +519,9 @@ static void brightness_mode() {
 //   set brightness <0-255>   LED level (all LEDs preview it briefly)
 //   set px <min-max>         pixels for the full slider travel
 //   set reverse <0|1>        flip the slider direction
+//   set center <0-32767>     slider position used as centre by the re-centre chord
+//   center                   take the current slider position as centre
+//   pos                      current slider position (0-32767, -1 = unknown)
 //   save                     write current settings to flash
 //   revert                   reload the settings saved in flash
 //   defaults                 load factory defaults (not saved until "save")
@@ -507,6 +532,7 @@ static void print_settings_json(const settings_t& s) {
     Serial.print("{\"brightness\":");  Serial.print(s.brightness);
     Serial.print(",\"px\":");          Serial.print(s.px_per_travel);
     Serial.print(",\"reverse\":");     Serial.print(s.reverse);
+    Serial.print(",\"center\":");      Serial.print(s.center);
     Serial.print("}");
 }
 
@@ -537,10 +563,10 @@ static void reply_info() {
     Serial.print(",\"hw\":\"" HW_REV "\"");
     Serial.print(",\"slider\":\"" SLIDER_TYPE "\"");
     Serial.print(",\"buttons\":"); Serial.print(NUM_BUTTONS);
-    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\"]");
+    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\",\"center\"]");
     Serial.print(",\"limits\":{\"brightness\":[0,255],\"px\":[");
     Serial.print(PX_PER_TRAVEL_MIN); Serial.print(","); Serial.print(PX_PER_TRAVEL_MAX);
-    Serial.print("],\"reverse\":[0,1]}");
+    Serial.print("],\"reverse\":[0,1],\"center\":[0,32767]}");
     Serial.print(",\"defaults\":"); print_settings_json(d);
     Serial.print(",\"settings\":"); print_settings_json(cfg);
     Serial.print(",\"dirty\":");    Serial.print(settings_dirty() ? "true" : "false");
@@ -556,6 +582,21 @@ static bool parse_long(const char* s, long* out) {
     return true;
 }
 
+// Current slider position, 0-32767 before the direction flip; -1 if unknown
+static int32_t slider_raw_pos() {
+    if (!slider_connected || slider_smooth < 0) return -1;
+    float v = slider_smooth < SLIDER_ADC_MAX ? slider_smooth : SLIDER_ADC_MAX;
+    return (int32_t)(v * 32767.0f / SLIDER_ADC_MAX + 0.5f);
+}
+
+static void reply_pos() {
+    Serial.print("{\"ok\":true,\"type\":\"pos\",\"pos\":");
+    Serial.print(slider_raw_pos());
+    Serial.print(",\"center\":");
+    Serial.print(cfg.center);
+    Serial.println("}");
+}
+
 static void restore_button_leds() {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) led_set(i, btn_pressed[i]);
 }
@@ -568,6 +609,14 @@ static void run_command(char* line) {
 
     if (!strcmp(cmd, "info")) { reply_info(); return; }
     if (!strcmp(cmd, "get"))  { reply_settings("settings"); return; }
+    if (!strcmp(cmd, "pos"))  { reply_pos(); return; }
+    if (!strcmp(cmd, "center")) {       // take the current slider position as centre
+        int32_t p = slider_raw_pos();
+        if (p < 0) { reply_error("slider not connected"); return; }
+        cfg.center = (uint16_t)p;
+        reply_settings("settings");
+        return;
+    }
     if (!strcmp(cmd, "save")) { save_settings(); reply_settings("saved"); return; }
     if (!strcmp(cmd, "revert") || !strcmp(cmd, "defaults")) {
         if (cmd[0] == 'r') cfg = cfg_saved;
@@ -589,6 +638,9 @@ static void run_command(char* line) {
         } else if (!strcmp(key, "px")) {
             if (v < PX_PER_TRAVEL_MIN || v > PX_PER_TRAVEL_MAX) { reply_error("px out of range"); return; }
             cfg.px_per_travel = (uint16_t)v;
+        } else if (!strcmp(key, "center")) {
+            if (v < 0 || v > 32767) { reply_error("center out of range"); return; }
+            cfg.center = (uint16_t)v;
         } else if (!strcmp(key, "reverse")) {
             if (v != 0 && v != 1) { reply_error("reverse must be 0 or 1"); return; }
             cfg.reverse = (uint8_t)v;
