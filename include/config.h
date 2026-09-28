@@ -18,8 +18,8 @@
   #define BOARD_ID      "nrf52840-nicenano"
   #define HW_REV        "1.0"
 #endif
-#if WIRING_V1
-  #define WIRING_ID     "v1"            // buttons left, LEDs right
+#if WIRING_V1 && !defined(ARDUINO_ARCH_RP2040)
+  #define WIRING_ID     "v1"            // buttons left, LEDs right (nice!nano only)
 #else
   #define WIRING_ID     "v2"            // buttons right, LEDs left
 #endif
@@ -72,21 +72,6 @@
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
-  #if WIRING_V1
-  // ---- Wiring v1 on RP2040: buttons LEFT (D2-D7), LEDs RIGHT
-  #define PIN_BTN_1  2
-  #define PIN_BTN_2  3
-  #define PIN_BTN_3  4
-  #define PIN_BTN_4  5
-  #define PIN_BTN_5  6
-  #define PIN_BTN_6  7
-  #define PIN_LED_1  21  // D10 position
-  #define PIN_LED_2  23  // D16 position
-  #define PIN_LED_3  20  // D14 position
-  #define PIN_LED_4  22  // D15 position
-  #define PIN_LED_5  26  // A0 position
-  #define PIN_LED_6  27  // A1 position
-  #else
   // ---- Wiring v2 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
   #define PIN_BTN_1  27  // A1 position
   #define PIN_BTN_2  26  // A0 position
@@ -100,7 +85,6 @@
   #define PIN_LED_4  7
   #define PIN_LED_5  8
   #define PIN_LED_6  9
-  #endif
 #elif WIRING_V1
 // ---- Wiring v1 (older builds): buttons on the LEFT column, LEDs on the RIGHT
 // Build with:  pio run -e nrf52840_v1 [-t upload]
