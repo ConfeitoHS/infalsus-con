@@ -13,15 +13,14 @@
 #define PROTO_VERSION   1
 #if defined(ARDUINO_ARCH_RP2040)
   #define BOARD_ID      "rp2040-promicro"
-  #define HW_REV        "1.1"
 #else
   #define BOARD_ID      "nrf52840-nicenano"
-  #define HW_REV        "1.0"
 #endif
-#if WIRING_V1 && !defined(ARDUINO_ARCH_RP2040)
-  #define WIRING_ID     "1.0"           // buttons left, LEDs right (nice!nano only)
+// Hardware version = wiring revision
+#if HW_1_0 && !defined(ARDUINO_ARCH_RP2040)
+  #define HW_REV        "1.0"           // buttons left, LEDs right (nice!nano only)
 #else
-  #define WIRING_ID     "1.1"           // buttons right, LEDs left
+  #define HW_REV        "1.1"           // buttons right, LEDs left
 #endif
 #define SLIDER_TYPE     "pot"           // slide potentiometer on the 4-pole jack
 
@@ -72,7 +71,7 @@
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
-  // ---- Wiring v1.1 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
+  // ---- hw 1.1 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
   #define PIN_BTN_1  27  // A1 position
   #define PIN_BTN_2  26  // A0 position
   #define PIN_BTN_3  22  // D15 position
@@ -85,9 +84,9 @@
   #define PIN_LED_4  7
   #define PIN_LED_5  8
   #define PIN_LED_6  9
-#elif WIRING_V1
+#elif HW_1_0
 // ---- Wiring v1 (older builds): buttons on the LEFT column, LEDs on the RIGHT
-// Build with:  pio run -e nrf52840_v1 [-t upload]
+// Build with:  pio run -e nrf52840-hw1_0 [-t upload]
 #define PIN_BTN_1       2   // D2  — P0.17
 #define PIN_BTN_2       3   // D3  — P0.20
 #define PIN_BTN_3       4   // D4  — P0.22
@@ -102,7 +101,7 @@
 #define PIN_LED_5       14  // D14 — P1.15
 #define PIN_LED_6       15  // D15 — P0.02
 #else
-// ---- Wiring v1.1 (current): buttons on the RIGHT column, LEDs on the LEFT
+// ---- hw 1.1 (current): buttons on the RIGHT column, LEDs on the LEFT
 // Button pins (active LOW with internal pull-up), right side, top to bottom
 #define PIN_BTN_1       15  // A0  — P0.02
 #define PIN_BTN_2       14  // D14 — P1.15

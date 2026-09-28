@@ -1,12 +1,12 @@
 # infalsus-con
 
-**v1.1** — RP2040 Pro Micro 기반 USB HID 게임 컨트롤러 (v1.0은 nice!nano/nRF52840, 지금도 지원). 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X)를 지원하고, 버튼마다 LED가 켜집니다.
+RP2040 Pro Micro 또는 nice!nano(nRF52840) 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X)를 지원하고, 버튼마다 LED가 켜집니다.
 
 ## 하드웨어
 
-- **MCU**: RP2040 Pro Micro (Sea-Picro · SparkFun Pro Micro RP2040 · 클론). v1.0: nice!nano v2 / SuperMini nRF52840
+- **MCU**: RP2040 Pro Micro (Sea-Picro · SparkFun Pro Micro RP2040 · 클론) 또는 nice!nano v2 / SuperMini nRF52840
 - **버튼**: 택트 스위치 ×6 → 핀과 GND 사이 (내부 풀업)
-- **LED**: ×6, GPIO → 220Ω → LED → GND 직결 (v1.0 nice!nano는 2N2222 경유)
+- **LED**: ×6, GPIO → 220Ω → LED → GND 직결 (nice!nano는 2N2222 경유)
 - **슬라이더**: 10kΩ 리니어 포텐셔미터, 양 끝 3.3V/GND, 가운데 핀 → ADC
 - **콘덴서**: 100nF (슬라이더 신호–GND), 10µF (3.3V–GND)
 
@@ -21,26 +21,32 @@
 
 ## 빌드 & 업로드
 
-기본 환경은 `rp2040` (v1.1)입니다.
+빌드 환경 이름은 `보드-hw버전`입니다. 기본 환경은 `rp2040-hw1_1`입니다.
+
+| 환경 | 보드 | 하드웨어 |
+|---|---|---|
+| `rp2040-hw1_1` | RP2040 Pro Micro | hw1.1 (버튼 오른쪽, LED 왼쪽) |
+| `nrf52840-hw1_1` | nice!nano | hw1.1 (버튼 오른쪽, LED 왼쪽) |
+| `nrf52840-hw1_0` | nice!nano | hw1.0 (버튼 왼쪽, LED 오른쪽, 초기 배선) |
 
 ```bash
-pio run              # 빌드 → .pio/build/rp2040/firmware.uf2
+pio run              # 빌드 → .pio/build/rp2040-hw1_1/firmware.uf2
 pio run -t upload    # 업로드
 pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출력
 ```
 
 드래그앤드롭: BOOTSEL을 누른 채 USB를 꽂으면 `RPI-RP2` 드라이브가 뜨고, 거기에 `firmware.uf2`를 복사합니다. 시리얼 모니터가 열려 있으면 업로드가 실패합니다.
 
-v1.0(nice!nano) 보드는 `pio run -e nrf52840 [-t upload]`. RST를 GND에 두 번 빠르게 터치하면 `NICENANO` 드라이브가 뜨고 `.pio/build/nrf52840/firmware.uf2`를 복사하면 됩니다.
+nice!nano 보드는 `pio run -e nrf52840-hw1_1 [-t upload]`. RST를 GND에 두 번 빠르게 터치하면 `NICENANO` 드라이브가 뜨고 `.pio/build/nrf52840-hw1_1/firmware.uf2`를 복사하면 됩니다.
 
 nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 저장소에 포함돼 있고, `scripts/install_variant.py`가 빌드 전에 프레임워크로 복사합니다.
 
-### 예전 배선(wiring v1) 보드
+### hw1.0 (초기 배선) 보드
 
-버튼이 왼쪽(D2–D7), LED가 오른쪽(D10 D16 D14 D15 A0 A1)에 있는 초기 nice!nano 보드는 `nrf52840_v1` 환경으로 빌드합니다. RP2040은 현재 배선(v1.1)만 지원합니다.
+버튼이 왼쪽(D2–D7), LED가 오른쪽(D10 D16 D14 D15 A0 A1)에 있는 초기 nice!nano 보드는 `nrf52840-hw1_0` 환경으로 빌드합니다. RP2040은 hw1.1만 지원합니다.
 
 ```bash
-pio run -e nrf52840_v1
+pio run -e nrf52840-hw1_0
 ```
 
 ### 리셋 / 진단 펌웨어
@@ -82,7 +88,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 
 | 명령 | 동작 |
 |---|---|
-| `info` | 펌웨어 버전, 보드, 하드웨어 리비전, 배선, 슬라이더 종류, 지원 설정(`caps`), 범위, 기본값, 현재값 |
+| `info` | 펌웨어 버전, 보드, 하드웨어 버전(배선), 슬라이더 종류, 지원 설정(`caps`), 범위, 기본값, 현재값 |
 | `get` | 현재 설정 |
 | `set brightness <0-255>` | LED 밝기. 바꾸면 LED 전체가 잠깐 켜져 미리 보여 줌 |
 | `set px <100-30000>` | 슬라이더 전체 이동에 해당하는 픽셀 수 (기본 3840) |
@@ -96,12 +102,12 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
 
-nice!nano 빌드는 `board`가 `nrf52840-nicenano`, `hw`가 `1.0`이고, 이 브랜치의 RP2040 빌드는 `rp2040-promicro` / `1.1`입니다. `nrf52840_v1` 환경으로 빌드하면 `wiring`이 `1.0`으로 보고됩니다.
+`hw`는 배선 버전입니다. `nrf52840-hw1_0`으로 빌드하면 `1.0`, 나머지는 `1.1`로 보고됩니다. `board`는 nice!nano가 `nrf52840-nicenano`, RP2040이 `rp2040-promicro`입니다.
 
 ## 파라미터
 
@@ -109,7 +115,7 @@ nice!nano 빌드는 `board`가 `nrf52840-nicenano`, `hw`가 `1.0`이고, 이 브
 
 - `BUTTON_KEYS`: 키 매핑
 - `DEBOUNCE_MS`: 버튼 디바운스 (20)
-- `FW_VERSION`, `BOARD_ID`, `HW_REV`, `WIRING_ID`, `SLIDER_TYPE`: `info`로 보고되는 식별 정보
+- `FW_VERSION`, `BOARD_ID`, `HW_REV`, `SLIDER_TYPE`: `info`로 보고되는 식별 정보
 - `MOUSE_INVERT_X`: 이 배선의 기본 슬라이더 방향 (-1 / 1). `reverse` 설정이 여기서 한 번 더 뒤집음
 - `MOUSE_MODE_RELATIVE`: 1 = 상대 이동(기본), 0 = 절대 좌표
 - `MOUSE_REL_PIXELS_PER_TRAVEL`: `px` 설정의 기본값 (3840). 범위는 `PX_PER_TRAVEL_MIN`/`MAX`
