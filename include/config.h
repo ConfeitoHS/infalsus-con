@@ -21,7 +21,7 @@
 #if WIRING_V1 && !defined(ARDUINO_ARCH_RP2040)
   #define WIRING_ID     "v1"            // buttons left, LEDs right (nice!nano only)
 #else
-  #define WIRING_ID     "v2"            // buttons right, LEDs left
+  #define WIRING_ID     "v1.1"          // buttons right, LEDs left
 #endif
 #define SLIDER_TYPE     "pot"           // slide potentiometer on the 4-pole jack
 
@@ -72,7 +72,7 @@
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
-  // ---- Wiring v2 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
+  // ---- Wiring v1.1 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
   #define PIN_BTN_1  27  // A1 position
   #define PIN_BTN_2  26  // A0 position
   #define PIN_BTN_3  22  // D15 position
@@ -102,7 +102,7 @@
 #define PIN_LED_5       14  // D14 — P1.15
 #define PIN_LED_6       15  // D15 — P0.02
 #else
-// ---- Wiring v2 (current): buttons on the RIGHT column, LEDs on the LEFT
+// ---- Wiring v1.1 (current): buttons on the RIGHT column, LEDs on the LEFT
 // Button pins (active LOW with internal pull-up), right side, top to bottom
 #define PIN_BTN_1       15  // A0  — P0.02
 #define PIN_BTN_2       14  // D14 — P1.15

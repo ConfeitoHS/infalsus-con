@@ -37,7 +37,7 @@ nice!nano용 보드 정의(`boards/`)와 핀 variant(`variants/nice_nano/`)가 �
 
 ### 예전 배선(wiring v1) 보드
 
-버튼이 왼쪽(D2–D7), LED가 오른쪽(D10 D16 D14 D15 A0 A1)에 있는 초기 nice!nano 보드는 `nrf52840_v1` 환경으로 빌드합니다. RP2040은 현재 배선(v2)만 지원합니다.
+버튼이 왼쪽(D2–D7), LED가 오른쪽(D10 D16 D14 D15 A0 A1)에 있는 초기 nice!nano 보드는 `nrf52840_v1` 환경으로 빌드합니다. RP2040은 현재 배선(v1.1)만 지원합니다.
 
 ```bash
 pio run -e nrf52840_v1
@@ -87,7 +87,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v2","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
