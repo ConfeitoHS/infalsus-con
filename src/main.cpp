@@ -6,17 +6,17 @@
 #if defined(ARDUINO_ARCH_RP2040)
   #include <LittleFS.h>
   static void settings_begin() { LittleFS.begin(); }
-  static bool settings_read(const char* path, uint8_t* v) {
+  static bool settings_read(const char* path, void* buf, size_t len) {
       File f = LittleFS.open(path, "r");
       if (!f) return false;
-      bool ok = f.read(v, 1) == 1;
+      bool ok = f.read((uint8_t*)buf, len) == (int)len;
       f.close();
       return ok;
   }
-  static void settings_write(const char* path, uint8_t v) {
+  static void settings_write(const char* path, const void* buf, size_t len) {
       File f = LittleFS.open(path, "w");
       if (!f) return;
-      f.write(&v, 1);
+      f.write((const uint8_t*)buf, len);
       f.close();
   }
 #else
@@ -24,21 +24,74 @@
   #include <InternalFileSystem.h>
   using namespace Adafruit_LittleFS_Namespace;
   static void settings_begin() { InternalFS.begin(); }
-  static bool settings_read(const char* path, uint8_t* v) {
+  static bool settings_read(const char* path, void* buf, size_t len) {
       File f(InternalFS);
       if (!f.open(path, FILE_O_READ)) return false;
-      bool ok = f.read(v, 1) == 1;
+      bool ok = f.read(buf, len) == (int)len;
       f.close();
       return ok;
   }
-  static void settings_write(const char* path, uint8_t v) {
+  static void settings_write(const char* path, const void* buf, size_t len) {
       InternalFS.remove(path);   // FILE_O_WRITE appends, so start fresh
       File f(InternalFS);
       if (!f.open(path, FILE_O_WRITE)) return;
-      f.write(&v, 1);
+      f.write((const uint8_t*)buf, len);
       f.close();
   }
 #endif
+
+// ---- User settings (persisted as one record) ----------------------------
+// Adding a field: append it, bump SETTINGS_VERSION and give it a default in
+// settings_defaults(); an older record is then ignored and defaults apply.
+#define SETTINGS_MAGIC    0x49   // 'I'
+#define SETTINGS_VERSION  1
+typedef struct __attribute__((packed)) {
+    uint8_t  magic;
+    uint8_t  version;
+    uint8_t  brightness;     // LED PWM level 0-255
+    uint8_t  reverse;        // 1 = flip the built-in slider direction
+    uint16_t px_per_travel;  // pixels for the full slider travel
+} settings_t;
+
+static const char* SETTINGS_FILE   = "/settings";
+static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // pre-1.0 builds
+
+static settings_t cfg;        // live values
+static settings_t cfg_saved;  // what is in flash (to report unsaved changes)
+
+static void settings_defaults(settings_t& s) {
+    s.magic         = SETTINGS_MAGIC;
+    s.version       = SETTINGS_VERSION;
+    s.brightness    = LED_BRIGHTNESS_DEFAULT;
+    s.reverse       = 0;
+    s.px_per_travel = MOUSE_REL_PIXELS_PER_TRAVEL;
+}
+
+static bool settings_valid(const settings_t& s) {
+    return s.magic == SETTINGS_MAGIC && s.version == SETTINGS_VERSION &&
+           s.reverse <= 1 &&
+           s.px_per_travel >= PX_PER_TRAVEL_MIN && s.px_per_travel <= PX_PER_TRAVEL_MAX;
+}
+
+static void load_settings() {
+    settings_t s;
+    if (!settings_read(SETTINGS_FILE, &s, sizeof(s)) || !settings_valid(s)) {
+        settings_defaults(s);
+        uint8_t b;   // keep a brightness saved by an older firmware
+        if (settings_read(LEGACY_BRIGHTNESS_FILE, &b, 1)) s.brightness = b;
+    }
+    cfg = cfg_saved = s;
+}
+
+static void save_settings() {
+    settings_write(SETTINGS_FILE, &cfg, sizeof(cfg));
+    cfg_saved = cfg;
+}
+
+static bool settings_dirty() { return memcmp(&cfg, &cfg_saved, sizeof(cfg)) != 0; }
+
+// Effective slider direction: the wiring's built-in direction, optionally flipped
+static inline bool invert_x() { return (MOUSE_INVERT_X < 0) != (cfg.reverse != 0); }
 
 // Absolute mouse HID report descriptor.
 // Always use our own to guarantee the report struct matches exactly.
@@ -116,9 +169,8 @@ static uint32_t slider_detect_changed = 0;
 // (re)sent because the USB endpoint was busy on the previous attempt.
 static bool kb_report_pending = false;
 
-// LED brightness (PWM duty), persisted in internal flash
-static uint8_t  led_brightness = LED_BRIGHTNESS_DEFAULT;
-static const char* BRIGHTNESS_FILE = "/led_brightness";
+// All LEDs are shown at the brightness level until this time (serial preview)
+static uint32_t led_preview_until = 0;
 
 // Brightness-setup mode can only be entered until this time after boot
 static uint32_t brightness_window_end = 0;
@@ -129,22 +181,13 @@ static inline uint8_t led_duty(uint8_t level) {
 }
 
 static void led_set(uint8_t idx, bool on) {
-    analogWrite(LED_PINS[idx], led_duty(on ? led_brightness : 0));
+    analogWrite(LED_PINS[idx], led_duty(on ? cfg.brightness : 0));
 }
 
 static void leds_all(uint8_t level) {
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
         analogWrite(LED_PINS[i], led_duty(level));
     }
-}
-
-static void load_brightness() {
-    uint8_t b;
-    if (settings_read(BRIGHTNESS_FILE, &b)) led_brightness = b;
-}
-
-static void save_brightness() {
-    settings_write(BRIGHTNESS_FILE, led_brightness);
 }
 
 static bool any_button_down() {
@@ -293,7 +336,7 @@ static void handle_slider_detect() {
 // moves are not lost to rounding; big moves are split into int8 steps.
 static void send_rel_dx(int32_t units, int8_t max_step = 127, uint8_t pace_ms = 0) {
     static float carry = 0;
-    float px = units * (MOUSE_REL_PIXELS_PER_TRAVEL / 32767.0f) + carry;
+    float px = units * (cfg.px_per_travel / 32767.0f) + carry;
     int32_t dx = (int32_t)px;
     carry = px - dx;
     while (dx != 0) {
@@ -371,7 +414,7 @@ static void handle_slider() {
 
     // Map to HID absolute (0-32767)
     uint16_t abs_x = (uint16_t)((uint32_t)adc * 32767UL / SLIDER_ADC_MAX);
-    if (MOUSE_INVERT_X < 0) abs_x = 32767 - abs_x;
+    if (invert_x()) abs_x = 32767 - abs_x;
 
     // Rest lock: once still, ignore anything smaller than a deliberate move
     uint16_t delta = (abs_x > slider_last_x) ? abs_x - slider_last_x
@@ -397,27 +440,6 @@ static void handle_slider() {
     report.x = abs_x;
     report.y = SLIDER_ABS_Y;
     usb_hid.sendReport(RID_MOUSE, &report, sizeof(report));
-#endif
-}
-
-// --------------------------------------------------------
-// nRF52840 only: P0.09 / P0.10 are wired to the NFC antenna block by
-// default and ignore GPIO until UICR.NFCPINS is cleared. One-time flash
-// write that survives re-flashing; the chip must reset afterward.
-// --------------------------------------------------------
-static void release_nfc_pins_as_gpio() {
-#if defined(NRF52840_XXAA)
-    if ((NRF_UICR->NFCPINS & UICR_NFCPINS_PROTECT_Msk) !=
-        (UICR_NFCPINS_PROTECT_NFC << UICR_NFCPINS_PROTECT_Pos)) {
-        return;
-    }
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NRF_UICR->NFCPINS &= ~UICR_NFCPINS_PROTECT_Msk;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
-    NVIC_SystemReset();
 #endif
 }
 
@@ -453,16 +475,22 @@ static void brightness_mode() {
             float pos = (adc - lo) / (hi - lo);
             if (pos < 0.0f) pos = 0.0f;
             if (pos > 1.0f) pos = 1.0f;
-            if (MOUSE_INVERT_X < 0) pos = 1.0f - pos;
+            if (invert_x()) pos = 1.0f - pos;
             uint32_t level = (uint32_t)(pos * 255.0f + 0.5f);
             if (level < LED_BRIGHTNESS_MIN) level = LED_BRIGHTNESS_MIN;
-            led_brightness = (uint8_t)level;
-            leds_all(led_brightness);
+            cfg.brightness = (uint8_t)level;
+            leds_all(cfg.brightness);
         }
         delay(POLL_INTERVAL_MS);
     }
 
-    save_brightness();
+    // Commit only the brightness; other unsaved (serial) changes stay live
+    // but unsaved
+    settings_t live = cfg;
+    cfg = cfg_saved;
+    cfg.brightness = live.brightness;
+    save_settings();
+    cfg = live;
 
     for (uint8_t k = 0; k < 2; k++) {
         leds_all(0);
@@ -478,6 +506,173 @@ static void brightness_mode() {
         btn_pressed[i] = false;
         btn_last_change[i] = millis();
     }
+}
+
+// --------------------------------------------------------
+// Serial configuration protocol (USB CDC, 115200, one command per line).
+// Every reply is a single JSON line starting with '{'; other lines on the
+// port (debug output) do not start with '{' and can be ignored.
+//
+//   info                     identity, capabilities, limits, defaults, settings
+//   get                      current settings
+//   set brightness <0-255>   LED level (all LEDs preview it briefly)
+//   set px <min-max>         pixels for the full slider travel
+//   set reverse <0|1>        flip the slider direction
+//   save                     write current settings to flash
+//   revert                   reload the settings saved in flash
+//   defaults                 load factory defaults (not saved until "save")
+//
+// "set" applies immediately but is lost on unplug unless "save" follows.
+// --------------------------------------------------------
+static void print_settings_json(const settings_t& s) {
+    Serial.print("{\"brightness\":");  Serial.print(s.brightness);
+    Serial.print(",\"px\":");          Serial.print(s.px_per_travel);
+    Serial.print(",\"reverse\":");     Serial.print(s.reverse);
+    Serial.print("}");
+}
+
+static void reply_settings(const char* type) {
+    Serial.print("{\"ok\":true,\"type\":\"");
+    Serial.print(type);
+    Serial.print("\",\"settings\":");
+    print_settings_json(cfg);
+    Serial.print(",\"dirty\":");
+    Serial.print(settings_dirty() ? "true" : "false");
+    Serial.println("}");
+}
+
+static void reply_error(const char* msg) {
+    Serial.print("{\"ok\":false,\"error\":\"");
+    Serial.print(msg);
+    Serial.println("\"}");
+}
+
+static void reply_info() {
+    settings_t d;
+    settings_defaults(d);
+    Serial.print("{\"ok\":true,\"type\":\"info\"");
+    Serial.print(",\"name\":\"" FW_NAME "\"");
+    Serial.print(",\"fw\":\"" FW_VERSION "\"");
+    Serial.print(",\"proto\":");  Serial.print(PROTO_VERSION);
+    Serial.print(",\"board\":\"" BOARD_ID "\"");
+    Serial.print(",\"hw\":\"" HW_REV "\"");
+    Serial.print(",\"wiring\":\"" WIRING_ID "\"");
+    Serial.print(",\"slider\":\"" SLIDER_TYPE "\"");
+    Serial.print(",\"buttons\":"); Serial.print(NUM_BUTTONS);
+    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\"]");
+    Serial.print(",\"limits\":{\"brightness\":[0,255],\"px\":[");
+    Serial.print(PX_PER_TRAVEL_MIN); Serial.print(","); Serial.print(PX_PER_TRAVEL_MAX);
+    Serial.print("],\"reverse\":[0,1]}");
+    Serial.print(",\"defaults\":"); print_settings_json(d);
+    Serial.print(",\"settings\":"); print_settings_json(cfg);
+    Serial.print(",\"dirty\":");    Serial.print(settings_dirty() ? "true" : "false");
+    Serial.println("}");
+}
+
+static bool parse_long(const char* s, long* out) {
+    if (!s || !*s) return false;
+    char* end;
+    long v = strtol(s, &end, 10);
+    if (*end != '\0') return false;
+    *out = v;
+    return true;
+}
+
+static void restore_button_leds() {
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) led_set(i, btn_pressed[i]);
+}
+
+static void run_command(char* line) {
+    char* cmd = strtok(line, " \t");
+    if (!cmd) return;
+    char* key = strtok(NULL, " \t");
+    char* val = strtok(NULL, " \t");
+
+    if (!strcmp(cmd, "info")) { reply_info(); return; }
+    if (!strcmp(cmd, "get"))  { reply_settings("settings"); return; }
+    if (!strcmp(cmd, "save")) { save_settings(); reply_settings("saved"); return; }
+    if (!strcmp(cmd, "revert") || !strcmp(cmd, "defaults")) {
+        if (cmd[0] == 'r') cfg = cfg_saved;
+        else               settings_defaults(cfg);
+        slider_last_x = 0xFFFF;   // direction may have changed
+        restore_button_leds();
+        reply_settings("settings");
+        return;
+    }
+    if (!strcmp(cmd, "set")) {
+        long v;
+        if (!key || !parse_long(val, &v)) { reply_error("usage: set <key> <number>"); return; }
+        if (!strcmp(key, "brightness")) {
+            if (v < 0 || v > 255) { reply_error("brightness out of range"); return; }
+            cfg.brightness = (uint8_t)v;
+            leds_all(cfg.brightness);
+            led_preview_until = millis() + LED_PREVIEW_MS;
+            if (!led_preview_until) led_preview_until = 1;
+        } else if (!strcmp(key, "px")) {
+            if (v < PX_PER_TRAVEL_MIN || v > PX_PER_TRAVEL_MAX) { reply_error("px out of range"); return; }
+            cfg.px_per_travel = (uint16_t)v;
+        } else if (!strcmp(key, "reverse")) {
+            if (v != 0 && v != 1) { reply_error("reverse must be 0 or 1"); return; }
+            cfg.reverse = (uint8_t)v;
+            slider_last_x = 0xFFFF;   // new direction: take a fresh reference
+        } else {
+            reply_error("unknown setting");
+            return;
+        }
+        reply_settings("settings");
+        return;
+    }
+    reply_error("unknown command");
+}
+
+static void handle_serial() {
+    static char    buf[64];
+    static uint8_t len = 0;
+    static bool    overflow = false;
+
+    while (Serial.available() > 0) {
+        int c = Serial.read();
+        if (c < 0) break;
+        if (c == '\r') continue;
+        if (c == '\n') {
+            buf[len] = '\0';
+            if (overflow) reply_error("line too long");
+            else run_command(buf);
+            len = 0;
+            overflow = false;
+        } else if (len < sizeof(buf) - 1) {
+            buf[len++] = (char)c;
+        } else {
+            overflow = true;
+        }
+    }
+
+    // End of the brightness preview: back to showing pressed buttons
+    if (led_preview_until && (int32_t)(millis() - led_preview_until) >= 0) {
+        led_preview_until = 0;
+        restore_button_leds();
+    }
+}
+
+// --------------------------------------------------------
+// nRF52840 only: P0.09 / P0.10 are wired to the NFC antenna block by
+// default and ignore GPIO until UICR.NFCPINS is cleared. One-time flash
+// write that survives re-flashing; the chip must reset afterward.
+// --------------------------------------------------------
+static void release_nfc_pins_as_gpio() {
+#if defined(NRF52840_XXAA)
+    if ((NRF_UICR->NFCPINS & UICR_NFCPINS_PROTECT_Msk) !=
+        (UICR_NFCPINS_PROTECT_NFC << UICR_NFCPINS_PROTECT_Pos)) {
+        return;
+    }
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NRF_UICR->NFCPINS &= ~UICR_NFCPINS_PROTECT_Msk;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy) {}
+    NVIC_SystemReset();
+#endif
 }
 
 // --------------------------------------------------------
@@ -512,7 +707,7 @@ void setup() {
     }
 
     settings_begin();
-    load_brightness();
+    load_settings();
 
     led_self_test();
 
@@ -565,6 +760,9 @@ void loop() {
     // Process slider
     handle_slider_detect();
     handle_slider();
+
+    // Configuration commands from the host
+    handle_serial();
 
     delay(POLL_INTERVAL_MS);
 }

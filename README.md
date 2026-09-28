@@ -68,15 +68,43 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 
 밝기는 내부 플래시에 저장되어 전원을 뽑아도 유지됩니다.
 
+## 설정 명령어 (USB 시리얼)
+
+펌웨어 1.0.0부터 USB 시리얼(115200)로 설정을 읽고 바꿀 수 있습니다. 설정 도구가 이 명령어를 쓰고, 시리얼 모니터에서 직접 입력해도 됩니다. 한 줄에 명령 하나이고, 응답은 항상 `{`로 시작하는 JSON 한 줄입니다.
+
+| 명령 | 동작 |
+|---|---|
+| `info` | 펌웨어 버전, 보드, 하드웨어 리비전, 배선, 슬라이더 종류, 지원 설정(`caps`), 범위, 기본값, 현재값 |
+| `get` | 현재 설정 |
+| `set brightness <0-255>` | LED 밝기. 바꾸면 LED 전체가 잠깐 켜져 미리 보여 줌 |
+| `set px <100-30000>` | 슬라이더 전체 이동에 해당하는 픽셀 수 (기본 3840) |
+| `set reverse <0\|1>` | 슬라이더 좌우 반전 |
+| `save` | 현재 설정을 플래시에 저장 |
+| `revert` | 저장된 설정으로 되돌림 |
+| `defaults` | 기본값으로 바꿈 (`save`해야 저장) |
+
+`set`은 바로 적용되지만 `save` 전에는 저장되지 않습니다. 응답의 `dirty`가 `true`면 저장 안 된 변경이 있다는 뜻입니다.
+
+`info` 응답 예:
+
+```json
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v2","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+```
+
+설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
+
+nice!nano 빌드는 `board`가 `nrf52840-nicenano`, `hw`가 `1.0`이고, 이 브랜치의 RP2040 빌드는 `rp2040-promicro` / `1.1`입니다. `nrf52840_v1`·`rp2040_v1` 환경으로 빌드하면 `wiring`이 `v1`로 보고됩니다.
+
 ## 파라미터
 
 `include/config.h`에서 조정:
 
 - `BUTTON_KEYS`: 키 매핑
 - `DEBOUNCE_MS`: 버튼 디바운스 (20)
-- `MOUSE_INVERT_X`: 슬라이더 방향 (-1 / 1)
+- `FW_VERSION`, `BOARD_ID`, `HW_REV`, `WIRING_ID`, `SLIDER_TYPE`: `info`로 보고되는 식별 정보
+- `MOUSE_INVERT_X`: 이 배선의 기본 슬라이더 방향 (-1 / 1). `reverse` 설정이 여기서 한 번 더 뒤집음
 - `MOUSE_MODE_RELATIVE`: 1 = 상대 이동(기본), 0 = 절대 좌표
-- `MOUSE_REL_PIXELS_PER_TRAVEL`: 슬라이더 전체 이동에 해당하는 픽셀 수 (3840) — 상대 모드와 수동 센터 보정에 사용
+- `MOUSE_REL_PIXELS_PER_TRAVEL`: `px` 설정의 기본값 (3840). 범위는 `PX_PER_TRAVEL_MIN`/`MAX`
 - `RECENTER_CHORD_MASK`, `RECENTER_CHORD_ANY_MASK`, `RECENTER_TAPS`, `RECENTER_WINDOW_MS`: 센터 보정 제스처 (ASDF + Shift/Space / 4번 / 500ms)
 - `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
 - `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING_MIN/MAX`, `SLIDER_SPEED_GAIN`: 적응형 노이즈 필터
