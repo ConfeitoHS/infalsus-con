@@ -1,5 +1,7 @@
 # infalsus-con
 
+> **이 브랜치는 더 이상 업데이트하지 않습니다.** nice!nano 지원은 `main` 브랜치로 합쳐졌습니다. `main`에서 `pio run -e nrf52840-hw1_1` (초기 배선은 `nrf52840-hw1_0`)로 빌드하세요.
+
 RP2040 Pro Micro 또는 nice!nano(nRF52840) 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 슬라이드 포텐셔미터(마우스 X)를 지원하고, 버튼마다 LED가 켜집니다.
 
 ## 하드웨어
