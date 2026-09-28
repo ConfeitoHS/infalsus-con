@@ -244,7 +244,7 @@ class DemoTransport {
     const [cmd, key, val] = line.trim().split(/\s+/);
     if (cmd === "info") return this.emit({
       ok: true, type: "info", name: "infalsus-con", fw: "1.3.0", proto: 1,
-      board: "rp2040-promicro", hw: "1.1", wiring: "1.1", slider: "pot", buttons: 6,
+      board: "rp2040-promicro", hw: "1.1", slider: "pot", buttons: 6,
       caps: ["brightness", "px", "reverse"],
       limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1] },
       defaults: { ...this.defaults }, settings: { ...this.cfg }, dirty: this.dirty(),
@@ -402,8 +402,7 @@ function renderInfo() {
   const rows = [
     ["펌웨어", info.fw],
     ["보드", BOARD_NAMES[info.board] || info.board],
-    ["하드웨어", info.hw],
-    ["배선", info.wiring],
+    ["하드웨어", "hw" + info.hw],
     ["슬라이더", SLIDER_NAMES[info.slider] || info.slider],
     ["버튼", info.buttons + "개"],
   ];
