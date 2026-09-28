@@ -535,7 +535,6 @@ static void reply_info() {
     Serial.print(",\"proto\":");  Serial.print(PROTO_VERSION);
     Serial.print(",\"board\":\"" BOARD_ID "\"");
     Serial.print(",\"hw\":\"" HW_REV "\"");
-    Serial.print(",\"wiring\":\"" WIRING_ID "\"");
     Serial.print(",\"slider\":\"" SLIDER_TYPE "\"");
     Serial.print(",\"buttons\":"); Serial.print(NUM_BUTTONS);
     Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\"]");

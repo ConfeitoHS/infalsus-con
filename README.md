@@ -25,7 +25,7 @@ RP2040 Pro Micro 기반 USB HID 게임 컨트롤러. 버튼 6개(키보드)와 �
 ## 빌드 & 업로드
 
 ```bash
-pio run              # 빌드 → .pio/build/rp2040/firmware.uf2
+pio run              # 빌드 → .pio/build/rp2040-hw1_1/firmware.uf2
 pio run -t upload    # 업로드
 pio device monitor   # 시리얼 모니터 (115200) — 슬라이더 ADC 값 출력
 ```
@@ -71,7 +71,7 @@ pio run -e reset -t upload
 
 | 명령 | 동작 |
 |---|---|
-| `info` | 펌웨어 버전, 보드, 하드웨어 리비전, 배선, 슬라이더 종류, 지원 설정(`caps`), 범위, 기본값, 현재값 |
+| `info` | 펌웨어 버전, 보드, 하드웨어 버전(배선), 슬라이더 종류, 지원 설정(`caps`), 범위, 기본값, 현재값 |
 | `get` | 현재 설정 |
 | `set brightness <0-255>` | LED 밝기. 바꾸면 LED 전체가 잠깐 켜져 미리 보여 줌 |
 | `set px <100-30000>` | 슬라이더 전체 이동에 해당하는 픽셀 수 (기본 3840) |
@@ -85,7 +85,7 @@ pio run -e reset -t upload
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"rp2040-promicro","hw":"1.1","wiring":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"rp2040-promicro","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
@@ -94,7 +94,7 @@ pio run -e reset -t upload
 
 `include/config.h`에서 조정:
 
-- `FW_VERSION`, `BOARD_ID`, `HW_REV`, `WIRING_ID`, `SLIDER_TYPE`: `info`로 보고되는 식별 정보
+- `FW_VERSION`, `BOARD_ID`, `HW_REV`, `SLIDER_TYPE`: `info`로 보고되는 식별 정보
 - `BUTTON_KEYS`: 키 매핑
 - `DEBOUNCE_MS`: 버튼 디바운스 (20)
 - `MOUSE_INVERT_X`: 이 배선의 기본 슬라이더 방향 (-1 / 1). `reverse` 설정이 여기서 한 번 더 뒤집음
