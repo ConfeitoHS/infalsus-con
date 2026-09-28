@@ -76,7 +76,7 @@ pio run -e reset -t upload
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"rp2040-promicro","hw":"1.1","wiring":"v2","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"rp2040-promicro","hw":"1.1","wiring":"v1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
