@@ -11,16 +11,25 @@
 #define FW_NAME         "infalsus-con"
 #define FW_VERSION      "1.3.0"
 #define PROTO_VERSION   1
-#define BOARD_ID        "rp2040-promicro"   // MCU board family
-#define HW_REV          "1.1"               // hardware version: any wiring or part change bumps it
-                                            // (1.1 = buttons right, LEDs left, pot slider)
-#define SLIDER_TYPE     "pot"               // slide potentiometer on the 4-pole jack
+#if defined(ARDUINO_ARCH_RP2040)
+  #define BOARD_ID      "rp2040-promicro"
+#else
+  #define BOARD_ID      "nrf52840-nicenano"
+#endif
+// Hardware version: any wiring or part change bumps it. Selected by the
+// build environment (<board>-hwX_Y in platformio.ini).
+#if HW_1_0 && !defined(ARDUINO_ARCH_RP2040)
+  #define HW_REV        "1.0"           // buttons left, LEDs right (nice!nano only)
+#else
+  #define HW_REV        "1.1"           // buttons right, LEDs left, pot slider
+#endif
+#define SLIDER_TYPE     "pot"           // slide potentiometer on the 4-pole jack
 
 // ============================================================
-// Pin Configuration — RP2040 "Pro Micro" (Sea-Picro, SparkFun Pro Micro
-// RP2040, AliExpress clones). Numbers are RP2040 GPIO (GPxx).
+// Pin Configuration — hw 1.1 (both boards use the same Pro Micro positions)
 //
-// Physical layout (front, USB up):
+// RP2040 "Pro Micro" (Sea-Picro, SparkFun Pro Micro RP2040, clones),
+// front, USB up. Numbers are RP2040 GPIO (GPxx).
 //
 //         ┌──────────┐
 //         │  USB-C   │
@@ -37,25 +46,106 @@
 //     GP7 ┤ D7   D14 ├ GP20 ← SW4
 //     GP8 ┤ D8   D16 ├ GP23 ← SW5
 //     GP9 ┤ D9   D10 ├ GP21 ← SW6
+//   LED1..LED6 on GP4..GP9 (left side, D4..D9), 220Ω straight to the pin
 //         └──────────┘
-//   LED1..LED6 on GP4..GP9 (left side, D4..D9)
+//
+// nice!nano v2 (nRF52840), front, USB up:
+//
+//         ┌──────────┐
+//         │  USB-C   │
+//    ─────┤          ├─────
+//   P0.06 ┤ D0   RAW ├ battery
+//   P0.08 ┤ D1   GND ├
+//     GND ┤      RST ├ ← reset tact switch → GND
+//     GND ┤      VCC ├ 3.3V out
+//   P0.17 ┤ D2   D17 ├ P0.31  ← slider cable detect
+//   P0.20 ┤ D3   D16 ├ P0.29  (A1) ← slider
+//   P0.22 ┤ D4   D15 ├ P0.02  (A0) ← SW1
+//   P0.24 ┤ D5   D14 ├ P1.15  ← SW2
+//   P1.00 ┤ D6   D13 ├ P1.13  ← SW3
+//   P0.11 ┤ D7   D12 ├ P1.11  ← SW4
+//   P1.04 ┤ D8   D11 ├ P0.10  ← SW5
+//   P1.06 ┤ D9   D10 ├ P0.09  ← SW6
+//   LED1..LED6 on D4..D9 (left side)
+//         └──────────┘
 // ============================================================
 
-// Slider (potentiometer) wiper — A2 position, GP28 / ADC2
-#define PIN_SLIDER          28
+// ============================================================
+// Pin numbers by board. Wiring is by PHYSICAL Pro Micro position, so the
+// same case/harness fits either board; only the GPIO numbers differ.
+//
+//   Pro Micro position :  RP2040 Pro Micro  |  nice!nano (Arduino idx / nRF)
+//   left  D2..D9       :  GP2..GP9          |  2..9  / P0.17 P0.20 P0.22 P0.24 P1.00 P0.11 P1.04 P1.06
+//   right A3 A2 A1 A0  :  GP29 28 27 26     |  17 16 15 14 / P0.31 P0.29 P0.02 P1.15
+//   right D15 D14      :  GP22 GP20         |  13 12 / P1.13 P1.11
+//   right D16 D10      :  GP23 GP21         |  11 10 / P0.10 P0.09
+// ============================================================
+#if defined(ARDUINO_ARCH_RP2040)
+  #define PIN_SLIDER          28  // A2 position — GP28 / ADC2
+  #define PIN_SLIDER_DETECT   29  // A3 position — GP29
+#else
+  // Slider (potentiometer) wiper — board label 029 (P0.29, AIN5)
+  #define PIN_SLIDER          A1
+  // Slider-unit cable detect — board label 031 (P0.31). Wired to the 2nd
+  // ring contact of the 4-pole jack; the plug's sleeve shorts it to GND
+  // whenever a cable is inserted, so LOW = connected.
+  #define PIN_SLIDER_DETECT   17
+#endif
 
-// Slider-unit cable detect — A3 position, GP29. Wired to the 2nd ring
-// contact of the 4-pole jack; the plug's sleeve shorts it to GND whenever
-// a cable is inserted, so LOW = connected.
-#define PIN_SLIDER_DETECT   29
+#if defined(ARDUINO_ARCH_RP2040)
+  // ---- hw 1.1 on RP2040: buttons RIGHT, LEDs LEFT (D4-D9)
+  #define PIN_BTN_1  27  // A1 position
+  #define PIN_BTN_2  26  // A0 position
+  #define PIN_BTN_3  22  // D15 position
+  #define PIN_BTN_4  20  // D14 position
+  #define PIN_BTN_5  23  // D16 position
+  #define PIN_BTN_6  21  // D10 position
+  #define PIN_LED_1  4
+  #define PIN_LED_2  5
+  #define PIN_LED_3  6
+  #define PIN_LED_4  7
+  #define PIN_LED_5  8
+  #define PIN_LED_6  9
+#elif HW_1_0
+// ---- Wiring v1 (older builds): buttons on the LEFT column, LEDs on the RIGHT
+// Build with:  pio run -e nrf52840-hw1_0 [-t upload]
+#define PIN_BTN_1       2   // D2  — P0.17
+#define PIN_BTN_2       3   // D3  — P0.20
+#define PIN_BTN_3       4   // D4  — P0.22
+#define PIN_BTN_4       5   // D5  — P0.24
+#define PIN_BTN_5       6   // D6  — P1.00
+#define PIN_BTN_6       7   // D7  — P0.11
 
+#define PIN_LED_1       10  // D10 — P0.09  (NFC pin; main.cpp clears UICR.NFCPINS)
+#define PIN_LED_2       11  // D11 — P0.10  (NFC pin)
+#define PIN_LED_3       12  // D12 — P1.11
+#define PIN_LED_4       13  // D13 — P1.13
+#define PIN_LED_5       14  // D14 — P1.15
+#define PIN_LED_6       15  // D15 — P0.02
+#else
+// ---- hw 1.1 (current): buttons on the RIGHT column, LEDs on the LEFT
 // Button pins (active LOW with internal pull-up), right side, top to bottom
-#define PIN_BTN_1       27  // A1  position
-#define PIN_BTN_2       26  // A0  position
-#define PIN_BTN_3       22  // D15 position
-#define PIN_BTN_4       20  // D14 position
-#define PIN_BTN_5       23  // D16 position
-#define PIN_BTN_6       21  // D10 position
+#define PIN_BTN_1       15  // A0  — P0.02
+#define PIN_BTN_2       14  // D14 — P1.15
+#define PIN_BTN_3       13  // D13 — P1.13
+#define PIN_BTN_4       12  // D12 — P1.11
+#define PIN_BTN_5       11  // D11 — P0.10
+#define PIN_BTN_6       10  // D10 — P0.09  (NFC pin; main.cpp clears UICR.NFCPINS)
+
+// LED pins (active HIGH, one per button), left side, D4..D9 top to bottom.
+// Driven through an NPN transistor so LED current comes from VCC:
+//   pin → 4.7kΩ → 2N2222 base; emitter → GND;
+//   collector → LED(-) ; LED(+) → 220Ω → 3.3V
+// (Driving the LED straight from the pin also works with a 1kΩ resistor,
+// but nRF52840 GPIO is limited to ~2mA/pin, ~15mA total. RP2040 GPIO can
+// drive 220Ω LEDs directly.)
+#define PIN_LED_1       4   // D4 — P0.22  (for Button 1)
+#define PIN_LED_2       5   // D5 — P0.24  (for Button 2)
+#define PIN_LED_3       6   // D6 — P1.00  (for Button 3)
+#define PIN_LED_4       7   // D7 — P0.11  (for Button 4)
+#define PIN_LED_5       8   // D8 — P1.04  (for Button 5)
+#define PIN_LED_6       9   // D9 — P1.06  (for Button 6)
+#endif
 
 #define NUM_BUTTONS     6
 
@@ -63,16 +153,6 @@ static const uint8_t BUTTON_PINS[NUM_BUTTONS] = {
     PIN_BTN_1, PIN_BTN_2, PIN_BTN_3,
     PIN_BTN_4, PIN_BTN_5, PIN_BTN_6
 };
-
-// LED pins (active HIGH, one per button), left side D4..D9 top to bottom.
-// Wiring: pin → 220Ω → LED(+) ; LED(−) → GND. RP2040 GPIO is set to 12mA
-// drive at boot, so no transistor is needed.
-#define PIN_LED_1       4
-#define PIN_LED_2       5
-#define PIN_LED_3       6
-#define PIN_LED_4       7
-#define PIN_LED_5       8
-#define PIN_LED_6       9
 
 static const uint8_t LED_PINS[NUM_BUTTONS] = {
     PIN_LED_1, PIN_LED_2, PIN_LED_3,
@@ -126,11 +206,11 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // 0 = send the slider's absolute screen position.
 #define MOUSE_MODE_RELATIVE 1
 
-// Default pixels the full (electrical) slider travel corresponds to. Used
-// by relative mode and by the manual re-centre move. 3840: the ~60mm
-// reachable in the housing covers one 1080p screen width at ~1 ADC step per
-// pixel; going much higher makes the cursor move in 2px steps. Changeable
-// at runtime with the "px" setting within the limits below.
+// Pixels the full (electrical) slider travel corresponds to. Used by
+// relative mode and by the manual re-centre move. 3840: the ~60mm reachable
+// in the housing covers one 1080p screen width at ~1 ADC step per pixel;
+// going much higher makes the cursor move in 2px steps. This is the
+// default of the "px" setting, changeable at runtime within the limits below.
 #define MOUSE_REL_PIXELS_PER_TRAVEL 3840
 #define PX_PER_TRAVEL_MIN           100
 #define PX_PER_TRAVEL_MAX           30000
