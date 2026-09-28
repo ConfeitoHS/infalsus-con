@@ -9,7 +9,7 @@
 // only when the serial command format changes incompatibly.
 // ============================================================
 #define FW_NAME         "infalsus-con"
-#define FW_VERSION      "1.0.0"
+#define FW_VERSION      "1.3.0"
 #define PROTO_VERSION   1
 #if defined(ARDUINO_ARCH_RP2040)
   #define BOARD_ID      "rp2040-promicro"

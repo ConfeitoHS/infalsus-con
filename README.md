@@ -69,7 +69,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 
 ## 설정 명령어 (USB 시리얼)
 
-펌웨어 1.0.0부터 USB 시리얼(115200)로 설정을 읽고 바꿀 수 있습니다. 설정 도구가 이 명령어를 쓰고, 시리얼 모니터에서 직접 입력해도 됩니다. 한 줄에 명령 하나이고, 응답은 항상 `{`로 시작하는 JSON 한 줄입니다.
+펌웨어 1.3.0부터 USB 시리얼(115200)로 설정을 읽고 바꿀 수 있습니다. 설정 도구가 이 명령어를 쓰고, 시리얼 모니터에서 직접 입력해도 됩니다. 한 줄에 명령 하나이고, 응답은 항상 `{`로 시작하는 JSON 한 줄입니다.
 
 | 명령 | 동작 |
 |---|---|
@@ -87,7 +87,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.0.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
