@@ -143,6 +143,12 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // must be down: 0b011110 = A S D F, 0b100001 = Shift or Space.
 #define RECENTER_CHORD_MASK     0b011110
 #define RECENTER_CHORD_ANY_MASK 0b100001
+// Slider position (0-32767 over the full electrical travel, before the
+// direction flip) the re-centre chord treats as the centre. Default = the
+// pot's electrical middle; the "center" setting overrides it when the
+// housing's reachable span is not centred on the pot.
+#define SLIDER_CENTER_DEFAULT   16384
+
 #define RECENTER_TAPS       4
 #define RECENTER_WINDOW_MS  500
 
