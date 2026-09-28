@@ -33,7 +33,7 @@ typedef struct __attribute__((packed)) {
 } settings_t;
 
 static const char* SETTINGS_FILE   = "/settings";
-static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // pre-1.0 builds
+static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // firmware 1.2 and older
 
 static settings_t cfg;        // live values
 static settings_t cfg_saved;  // what is in flash (to report unsaved changes)

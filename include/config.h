@@ -9,7 +9,7 @@
 // only when the serial command format changes incompatibly.
 // ============================================================
 #define FW_NAME         "infalsus-con"
-#define FW_VERSION      "1.0.0"
+#define FW_VERSION      "1.3.0"
 #define PROTO_VERSION   1
 #define BOARD_ID        "rp2040-promicro"   // MCU board family
 #define HW_REV          "1.1"               // hardware revision (wiring guide v1.1)
