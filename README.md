@@ -75,7 +75,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 
 ## 웹 설정 페이지
 
-크롬이나 엣지에서 **https://confeitohs.github.io/infalsus-con/config/** 를 열고 "컨트롤러 연결"을 누르면 LED 밝기, 슬라이더 감도(전체 이동 픽셀 수), 방향 반전을 바꾸고 저장할 수 있습니다. 설치할 것은 없고, 윈도우·맥·리눅스 모두 됩니다. 오른쪽 위에서 한국어·English·简体中文·日本語를 고를 수 있고, 처음에는 브라우저 언어를 따릅니다. 펌웨어 1.3.0 이상이 필요합니다.
+크롬이나 엣지에서 **https://confeitohs.github.io/infalsus-con/config/** 를 열고 "컨트롤러 연결"을 누르면 LED 밝기, 슬라이더 감도(전체 이동 픽셀 수), 방향 반전, 센터 위치를 바꾸고 저장할 수 있습니다. 설치할 것은 없고, 윈도우·맥·리눅스 모두 됩니다. 오른쪽 위에서 한국어·English·简体中文·日本語를 고를 수 있고, 처음에는 브라우저 언어를 따릅니다. 펌웨어 1.3.0 이상이 필요합니다.
 
 - 페이지 파일은 메인 브랜치의 `docs/config/index.html`이고, 이 브랜치의 펌웨어도 같은 페이지를 씁니다. 보드가 없어도 "데모 모드"로 화면을 확인할 수 있습니다.
 - 페이지는 `info` 응답을 보고 그 펌웨어가 지원하는 설정만 보여 줍니다. 통신 형식(`proto`)이 다르면 연결을 거부합니다.
@@ -93,6 +93,9 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 | `set brightness <0-255>` | LED 밝기. 바꾸면 LED 전체가 잠깐 켜져 미리 보여 줌 |
 | `set px <100-30000>` | 슬라이더 전체 이동에 해당하는 픽셀 수 (기본 3840) |
 | `set reverse <0\|1>` | 슬라이더 좌우 반전 |
+| `set center <0-32767>` | 센터 보정 조합이 센터로 삼는 슬라이더 위치 (기본 16384 = 가변저항 한가운데) |
+| `center` | 지금 슬라이더 위치를 센터로 설정 |
+| `pos` | 지금 슬라이더 위치 (0-32767, 연결 안 됨이면 -1) |
 | `save` | 현재 설정을 플래시에 저장 |
 | `revert` | 저장된 설정으로 되돌림 |
 | `defaults` | 기본값으로 바꿈 (`save`해야 저장) |
@@ -102,7 +105,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse","center"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1],"center":[0,32767]},"defaults":{"brightness":255,"px":3840,"reverse":0,"center":16384},"settings":{"brightness":255,"px":3840,"reverse":0,"center":16384},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
@@ -119,6 +122,7 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 - `MOUSE_INVERT_X`: 이 배선의 기본 슬라이더 방향 (-1 / 1). `reverse` 설정이 여기서 한 번 더 뒤집음
 - `MOUSE_MODE_RELATIVE`: 1 = 상대 이동(기본), 0 = 절대 좌표
 - `MOUSE_REL_PIXELS_PER_TRAVEL`: `px` 설정의 기본값 (3840). 범위는 `PX_PER_TRAVEL_MIN`/`MAX`
+- `SLIDER_CENTER_DEFAULT`: `center` 설정의 기본값 (16384 = 가변저항 전기적 한가운데)
 - `RECENTER_CHORD_MASK`, `RECENTER_CHORD_ANY_MASK`, `RECENTER_TAPS`, `RECENTER_WINDOW_MS`: 센터 보정 제스처 (ASDF + Shift/Space / 4번 / 500ms)
 - `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
 - `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING_MIN/MAX`, `SLIDER_SPEED_GAIN`: 적응형 노이즈 필터
