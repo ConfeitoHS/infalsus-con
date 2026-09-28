@@ -3,6 +3,20 @@
 #include <Adafruit_TinyUSB.h>
 
 // ============================================================
+// Identity — reported by the "info" serial command so a configuration
+// tool can check what it is talking to and offer only the options this
+// build supports. Bump FW_VERSION on every release; bump PROTO_VERSION
+// only when the serial command format changes incompatibly.
+// ============================================================
+#define FW_NAME         "infalsus-con"
+#define FW_VERSION      "1.0.0"
+#define PROTO_VERSION   1
+#define BOARD_ID        "rp2040-promicro"   // MCU board family
+#define HW_REV          "1.1"               // hardware revision (wiring guide v1.1)
+#define WIRING_ID       "v2"                // buttons right, LEDs left
+#define SLIDER_TYPE     "pot"               // slide potentiometer on the 4-pole jack
+
+// ============================================================
 // Pin Configuration — RP2040 "Pro Micro" (Sea-Picro, SparkFun Pro Micro
 // RP2040, AliExpress clones). Numbers are RP2040 GPIO (GPxx).
 //
@@ -101,7 +115,8 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // Slider cable plug/unplug debounce (ms)
 #define SLIDER_DETECT_DEBOUNCE_MS   50
 
-// Invert mouse X direction (set to -1 to reverse, 1 for normal)
+// Built-in mouse X direction for this wiring (-1 or 1). The "reverse"
+// setting (serial command / config tool) flips it at runtime.
 #define MOUSE_INVERT_X      -1
 
 // 1 = send relative mouse movement (Δx), like a normal mouse. Games that
@@ -111,11 +126,14 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // 0 = send the slider's absolute screen position.
 #define MOUSE_MODE_RELATIVE 1
 
-// Pixels the full (electrical) slider travel corresponds to. Used by
-// relative mode and by the manual re-centre move. 3840: the ~60mm reachable
-// in the housing covers one 1080p screen width at ~1 ADC step per pixel;
-// going much higher makes the cursor move in 2px steps.
-#define MOUSE_REL_PIXELS_PER_TRAVEL 3840.0f
+// Default pixels the full (electrical) slider travel corresponds to. Used
+// by relative mode and by the manual re-centre move. 3840: the ~60mm
+// reachable in the housing covers one 1080p screen width at ~1 ADC step per
+// pixel; going much higher makes the cursor move in 2px steps. Changeable
+// at runtime with the "px" setting within the limits below.
+#define MOUSE_REL_PIXELS_PER_TRAVEL 3840
+#define PX_PER_TRAVEL_MIN           100
+#define PX_PER_TRAVEL_MAX           30000
 
 // Manual re-centre: tap the buttons in RECENTER_CHORD_MASK together
 // RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
@@ -170,8 +188,13 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // LED brightness
 // ============================================================
 
-// PWM level (0-255) used until one is saved from brightness-setup mode
+// PWM level (0-255) used until one is saved (brightness-setup mode or the
+// "brightness" setting)
 #define LED_BRIGHTNESS_DEFAULT  255
+
+// How long all LEDs light at the new level after the brightness setting is
+// changed over serial, so the config tool gives a live preview
+#define LED_PREVIEW_MS          700
 
 // Lowest level the slider can set (0 = fully off)
 #define LED_BRIGHTNESS_MIN      0
