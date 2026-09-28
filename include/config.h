@@ -16,7 +16,7 @@
 #else
   #define BOARD_ID      "nrf52840-nicenano"
 #endif
-// Hardware version = wiring revision
+// Hardware version: any wiring or part change bumps it
 #if HW_1_0 && !defined(ARDUINO_ARCH_RP2040)
   #define HW_REV        "1.0"           // buttons left, LEDs right (nice!nano only)
 #else
