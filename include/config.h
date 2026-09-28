@@ -19,9 +19,9 @@
   #define HW_REV        "1.0"
 #endif
 #if WIRING_V1 && !defined(ARDUINO_ARCH_RP2040)
-  #define WIRING_ID     "v1"            // buttons left, LEDs right (nice!nano only)
+  #define WIRING_ID     "1.0"           // buttons left, LEDs right (nice!nano only)
 #else
-  #define WIRING_ID     "v1.1"          // buttons right, LEDs left
+  #define WIRING_ID     "1.1"           // buttons right, LEDs left
 #endif
 #define SLIDER_TYPE     "pot"           // slide potentiometer on the 4-pole jack
 

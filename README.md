@@ -67,6 +67,15 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 
 밝기는 내부 플래시에 저장되어 전원을 뽑아도 유지됩니다.
 
+## 웹 설정 페이지
+
+크롬이나 엣지에서 **https://confeitohs.github.io/infalsus-con/config/** 를 열고 "컨트롤러 연결"을 누르면 LED 밝기, 슬라이더 감도(전체 이동 픽셀 수), 방향 반전을 바꾸고 저장할 수 있습니다. 설치할 것은 없고, 윈도우·맥·리눅스 모두 됩니다. 펌웨어 1.3.0 이상이 필요합니다.
+
+- 페이지 파일은 메인 브랜치의 `docs/config/index.html`이고, 이 브랜치의 펌웨어도 같은 페이지를 씁니다. 보드가 없어도 "데모 모드"로 화면을 확인할 수 있습니다.
+- 페이지는 `info` 응답을 보고 그 펌웨어가 지원하는 설정만 보여 줍니다. 통신 형식(`proto`)이 다르면 연결을 거부합니다.
+- 시리얼 모니터 등 다른 프로그램이 포트를 열고 있으면 연결되지 않습니다.
+- 주소가 열리지 않으면 GitHub 저장소 **Settings → Pages**에서 Source를 **Deploy from a branch**, 브랜치 `main`, 폴더 `/docs`로 지정하세요.
+
 ## 설정 명령어 (USB 시리얼)
 
 펌웨어 1.3.0부터 USB 시리얼(115200)로 설정을 읽고 바꿀 수 있습니다. 설정 도구가 이 명령어를 쓰고, 시리얼 모니터에서 직접 입력해도 됩니다. 한 줄에 명령 하나이고, 응답은 항상 `{`로 시작하는 JSON 한 줄입니다.
@@ -87,12 +96,12 @@ nice!nano용. 저장된 설정(LED 밝기)을 지우고, LED를 계속 순서대
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"v1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"nrf52840-nicenano","hw":"1.0","wiring":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1]},"defaults":{"brightness":255,"px":3840,"reverse":0},"settings":{"brightness":255,"px":3840,"reverse":0},"dirty":false}
 ```
 
 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
 
-nice!nano 빌드는 `board`가 `nrf52840-nicenano`, `hw`가 `1.0`이고, 이 브랜치의 RP2040 빌드는 `rp2040-promicro` / `1.1`입니다. `nrf52840_v1` 환경으로 빌드하면 `wiring`이 `v1`로 보고됩니다.
+nice!nano 빌드는 `board`가 `nrf52840-nicenano`, `hw`가 `1.0`이고, 이 브랜치의 RP2040 빌드는 `rp2040-promicro` / `1.1`입니다. `nrf52840_v1` 환경으로 빌드하면 `wiring`이 `1.0`으로 보고됩니다.
 
 ## 파라미터
 
