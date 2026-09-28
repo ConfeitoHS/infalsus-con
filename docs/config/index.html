@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infalsus 설정</title>
+<meta name="description" content="Infalsus 컨트롤러 설정 — LED 밝기, 슬라이더 감도, 방향을 USB로 바꿉니다.">
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #1a2027; --muted: #5b6875; --line: #dde2e8;
+  --accent: #2f6fd6; --accent-ink: #ffffff; --ok: #1f8a3b; --warn: #b36b00; --err: #b3261e;
+  --chip: #eef2f7; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418; --card: #1a1f25; --ink: #e8ecf1; --muted: #9aa6b2; --line: #2c343d;
+    --accent: #5b93f0; --accent-ink: #0b1220; --ok: #4cc26e; --warn: #e0a040; --err: #f07167;
+    --chip: #232a32; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418; --card: #1a1f25; --ink: #e8ecf1; --muted: #9aa6b2; --line: #2c343d;
+  --accent: #5b93f0; --accent-ink: #0b1220; --ok: #4cc26e; --warn: #e0a040; --err: #f07167;
+  --chip: #232a32; --shadow: none;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+}
+main { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 22px; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.card h2 { font-size: 16px; margin: 0 0 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+button {
+  font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+  color: var(--ink); padding: 8px 14px; cursor: pointer;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button:disabled { opacity: .45; cursor: default; }
+button:not(:disabled):hover { filter: brightness(1.05); }
+.status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.dot.on { background: var(--ok); }
+.notice { border-radius: 8px; padding: 10px 12px; margin-top: 12px; background: var(--chip); }
+.notice.err { color: var(--err); }
+.notice.warn { color: var(--warn); }
+.notice:empty { display: none; }
+dl.info { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+dl.info dt { color: var(--muted); }
+dl.info dd { margin: 0; font-weight: 600; }
+.setting { padding: 14px 0; border-top: 1px solid var(--line); }
+.setting:first-of-type { border-top: 0; padding-top: 2px; }
+.setting-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.setting-head label { font-weight: 600; }
+.setting-head .val { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.help { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=number] {
+  font: inherit; width: 120px; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+}
+.presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.presets button { padding: 4px 10px; font-size: 13px; }
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.switch input { width: 42px; height: 24px; accent-color: var(--accent); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.dirty { color: var(--warn); font-weight: 600; }
+.saved { color: var(--ok); font-weight: 600; }
+details summary { cursor: pointer; color: var(--muted); }
+pre.log {
+  max-height: 220px; overflow: auto; background: var(--chip); border-radius: 8px;
+  padding: 10px; font-size: 12px; margin: 10px 0 0; white-space: pre-wrap; word-break: break-all;
+}
+.hidden { display: none !important; }
+footer { color: var(--muted); font-size: 13px; margin-top: 20px; }
+code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Infalsus 설정</h1>
+  <p class="sub">컨트롤러를 USB로 연결하고, LED 밝기와 슬라이더 감도·방향을 바꿉니다. 펌웨어 1.3.0 이상이 필요합니다.</p>
+
+  <section class="card">
+    <h2>연결</h2>
+    <div class="row">
+      <button id="btn-connect" class="primary">컨트롤러 연결</button>
+      <button id="btn-disconnect" disabled>연결 끊기</button>
+      <button id="btn-demo">데모 모드</button>
+      <span class="status"><span id="dot" class="dot"></span><span id="status-text">연결 안 됨</span></span>
+    </div>
+    <label class="help" style="display:flex;gap:6px;align-items:center;margin-top:10px">
+      <input type="checkbox" id="all-ports"> 목록에 컨트롤러가 안 보이면 체크하고 다시 연결 (모든 시리얼 포트 표시)
+    </label>
+    <div id="notice" class="notice"></div>
+  </section>
+
+  <section class="card hidden" id="card-device">
+    <h2>장치 정보</h2>
+    <dl class="info" id="device-info"></dl>
+  </section>
+
+  <section class="card hidden" id="card-settings">
+    <h2>설정</h2>
+    <div id="settings"></div>
+    <div class="actions">
+      <button id="btn-save" class="primary">컨트롤러에 저장</button>
+      <button id="btn-revert">저장된 값으로 되돌리기</button>
+      <button id="btn-defaults">기본값</button>
+      <span id="save-state"></span>
+    </div>
+    <p class="help" style="margin-top:10px">바꾼 값은 바로 적용되지만, <b>저장</b>을 눌러야 USB를 뽑은 뒤에도 유지됩니다.</p>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>통신 기록</summary>
+      <pre class="log" id="log"></pre>
+    </details>
+  </section>
+
+  <footer>
+    크롬·엣지(윈도우·맥·리눅스)에서 동작합니다. 사파리·파이어폭스는 Web Serial을 지원하지 않습니다.
+    PlatformIO 시리얼 모니터 등 다른 프로그램이 포트를 열고 있으면 연결되지 않습니다.
+  </footer>
+</main>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------------------
+// What this page understands. The firmware reports "proto"; anything else is
+// refused so an old page never sends commands a newer firmware reads
+// differently. Settings are shown only if the firmware lists them in "caps".
+// ---------------------------------------------------------------------------
+const PROTO_SUPPORTED = [1];
+
+const BOARD_NAMES = {
+  "rp2040-promicro": "RP2040 Pro Micro",
+  "nrf52840-nicenano": "nice!nano (nRF52840)",
+};
+const SLIDER_NAMES = { pot: "슬라이드 가변저항" };
+
+// USB vendor IDs used to pre-filter the port chooser
+const USB_FILTERS = [
+  { usbVendorId: 0x2E8A },  // Raspberry Pi (RP2040)
+  { usbVendorId: 0x1B4F },  // SparkFun (Pro Micro RP2040)
+  { usbVendorId: 0x239A },  // Adafruit (nice!nano bootloader / core)
+];
+
+const CONTROLS = {
+  brightness: {
+    label: "LED 밝기",
+    help: "버튼을 눌렀을 때 LED 밝기. 움직이는 동안 LED가 전부 켜져 미리 보여 줍니다. 0이면 꺼짐.",
+    kind: "range", step: 1,
+    format: v => `${v} / 255 (${Math.round(v / 2.55)}%)`,
+  },
+  px: {
+    label: "슬라이더 감도 (전체 이동 = 픽셀)",
+    help: "슬라이더를 끝에서 끝까지 움직였을 때 마우스가 가는 픽셀 수. 클수록 조금만 밀어도 많이 움직입니다. 기본 3840.",
+    kind: "number", step: 10,
+    presets: [1920, 2880, 3840, 5760, 7680],
+    format: v => `${v} px`,
+  },
+  reverse: {
+    label: "슬라이더 방향 반전",
+    help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
+    kind: "toggle",
+    format: v => (v ? "켜짐" : "꺼짐"),
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Transports: real Web Serial port, or an in-page simulation of the firmware
+// ---------------------------------------------------------------------------
+class SerialTransport {
+  constructor(port) { this.port = port; this.onLine = () => {}; this.onClose = () => {}; }
+  async open() {
+    await this.port.open({ baudRate: 115200 });
+    // Some cores only send data once DTR is asserted
+    try { await this.port.setSignals({ dataTerminalReady: true, requestToSend: true }); } catch (_) {}
+    this.writer = this.port.writable.getWriter();
+    this.enc = new TextEncoder();
+    this.reading = this.readLoop();
+  }
+  async readLoop() {
+    const dec = new TextDecoder();
+    let buf = "";
+    try {
+      while (this.port.readable) {
+        this.reader = this.port.readable.getReader();
+        try {
+          for (;;) {
+            const { value, done } = await this.reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let i;
+            while ((i = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, i).replace(/\r$/, "");
+              buf = buf.slice(i + 1);
+              if (line.length) this.onLine(line);
+            }
+          }
+        } finally {
+          this.reader.releaseLock();
+          this.reader = null;
+        }
+        if (this.closing) break;
+      }
+    } catch (e) {
+      if (!this.closing) log("! 읽기 오류: " + e.message);
+    }
+    if (!this.closing) this.onClose();
+  }
+  async write(line) { await this.writer.write(this.enc.encode(line + "\n")); }
+  async close() {
+    this.closing = true;
+    try { if (this.reader) await this.reader.cancel(); } catch (_) {}
+    try { await this.reading; } catch (_) {}
+    try { this.writer.releaseLock(); } catch (_) {}
+    try { await this.port.close(); } catch (_) {}
+  }
+}
+
+// Mirrors the firmware's command handling so the page can be tried without hardware
+class DemoTransport {
+  constructor() {
+    this.onLine = () => {}; this.onClose = () => {};
+    this.defaults = { brightness: 255, px: 3840, reverse: 0 };
+    this.saved = { brightness: 180, px: 3840, reverse: 0 };
+    this.cfg = { ...this.saved };
+  }
+  async open() { setTimeout(() => this.onLine("slider: connected"), 50); }
+  async close() {}
+  emit(obj) { setTimeout(() => this.onLine(JSON.stringify(obj)), 40); }
+  dirty() { return JSON.stringify(this.cfg) !== JSON.stringify(this.saved); }
+  settings(type) { return { ok: true, type, settings: { ...this.cfg }, dirty: this.dirty() }; }
+  async write(line) {
+    const [cmd, key, val] = line.trim().split(/\s+/);
+    if (cmd === "info") return this.emit({
+      ok: true, type: "info", name: "infalsus-con", fw: "1.3.0", proto: 1,
+      board: "rp2040-promicro", hw: "1.1", wiring: "1.1", slider: "pot", buttons: 6,
+      caps: ["brightness", "px", "reverse"],
+      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1] },
+      defaults: { ...this.defaults }, settings: { ...this.cfg }, dirty: this.dirty(),
+    });
+    if (cmd === "get") return this.emit(this.settings("settings"));
+    if (cmd === "save") { this.saved = { ...this.cfg }; return this.emit(this.settings("saved")); }
+    if (cmd === "revert") { this.cfg = { ...this.saved }; return this.emit(this.settings("settings")); }
+    if (cmd === "defaults") { this.cfg = { ...this.defaults }; return this.emit(this.settings("settings")); }
+    if (cmd === "set") {
+      const v = Number(val);
+      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1] }[key];
+      if (!lim) return this.emit({ ok: false, error: "unknown setting" });
+      if (!Number.isInteger(v) || v < lim[0] || v > lim[1]) return this.emit({ ok: false, error: key + " out of range" });
+      this.cfg[key] = v;
+      return this.emit(this.settings("settings"));
+    }
+    this.emit({ ok: false, error: "unknown command" });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Device: one JSON reply per command, answered in order
+// ---------------------------------------------------------------------------
+class Device {
+  constructor(transport) {
+    this.t = transport;
+    this.queue = [];      // { line, resolve, reject, key }
+    this.inflight = null;
+    this.t.onLine = line => this.handleLine(line);
+  }
+  handleLine(line) {
+    if (!line.startsWith("{")) { log("  " + line); return; }
+    let msg;
+    try { msg = JSON.parse(line); } catch (_) { log("  " + line); return; }
+    log("← " + line);
+    const job = this.inflight;
+    if (!job) return;
+    clearTimeout(job.timer);
+    this.inflight = null;
+    job.resolve(msg);
+    this.pump();
+  }
+  // key: commands with the same key replace a still-queued one (slider drags)
+  send(line, key = null) {
+    return new Promise((resolve, reject) => {
+      if (key) {
+        const q = this.queue.find(j => j.key === key);
+        if (q) { q.resolve(null); Object.assign(q, { line, resolve, reject }); return; }
+      }
+      this.queue.push({ line, resolve, reject, key });
+      this.pump();
+    });
+  }
+  async pump() {
+    if (this.inflight || !this.queue.length) return;
+    const job = this.queue.shift();
+    this.inflight = job;
+    job.timer = setTimeout(() => {
+      if (this.inflight !== job) return;
+      this.inflight = null;
+      job.reject(new Error("timeout"));
+      this.pump();
+    }, 2000);
+    log("→ " + job.line);
+    try { await this.t.write(job.line); }
+    catch (e) { clearTimeout(job.timer); this.inflight = null; job.reject(e); this.pump(); }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// UI
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+let device = null, transport = null, info = null, current = {}, dragging = null;
+
+function log(s) {
+  const el = $("log");
+  el.textContent += s + "\n";
+  if (el.textContent.length > 40000) el.textContent = el.textContent.slice(-30000);
+  el.scrollTop = el.scrollHeight;
+}
+function notice(text, kind = "") { const n = $("notice"); n.textContent = text; n.className = "notice " + kind; }
+function setStatus(on, text) { $("dot").classList.toggle("on", on); $("status-text").textContent = text; }
+
+function setConnectedUI(on) {
+  $("btn-connect").disabled = on;
+  $("btn-demo").disabled = on;
+  $("btn-disconnect").disabled = !on;
+  if (!on) { $("card-device").classList.add("hidden"); $("card-settings").classList.add("hidden"); }
+}
+
+async function connect(demo) {
+  notice("");
+  if (!demo && !("serial" in navigator)) {
+    notice("이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요.", "err");
+    return;
+  }
+  try {
+    if (demo) {
+      transport = new DemoTransport();
+    } else {
+      const opts = $("all-ports").checked ? {} : { filters: USB_FILTERS };
+      const port = await navigator.serial.requestPort(opts);
+      transport = new SerialTransport(port);
+    }
+    await transport.open();
+  } catch (e) {
+    if (e && e.name === "NotFoundError") return;   // chooser cancelled
+    notice("연결하지 못했습니다: " + (e.message || e) +
+           " — 다른 프로그램(시리얼 모니터 등)이 포트를 쓰고 있지 않은지 확인하세요.", "err");
+    transport = null;
+    return;
+  }
+  transport.onClose = () => { handleDisconnect("컨트롤러 연결이 끊겼습니다."); };
+  device = new Device(transport);
+  setConnectedUI(true);
+  setStatus(true, demo ? "데모 모드" : "연결됨, 확인 중…");
+
+  let reply;
+  try { reply = await device.send("info"); }
+  catch (_) {
+    notice("컨트롤러가 응답하지 않습니다. 펌웨어 1.2 이하이거나 다른 장치일 수 있습니다. 펌웨어를 1.3.0 이상으로 올려 주세요.", "err");
+    return disconnect();
+  }
+  if (!reply || !reply.ok || reply.type !== "info") {
+    notice("예상하지 못한 응답입니다. 펌웨어를 1.3.0 이상으로 올려 주세요.", "err");
+    return disconnect();
+  }
+  if (!PROTO_SUPPORTED.includes(reply.proto)) {
+    notice(`이 페이지가 모르는 통신 형식(proto ${reply.proto})입니다. 페이지를 새로 고치거나 최신 설정 페이지를 사용하세요.`, "err");
+    return disconnect();
+  }
+  info = reply;
+  setStatus(true, demo ? "데모 모드 (가짜 컨트롤러)" : "연결됨");
+  renderInfo();
+  renderSettings();
+  applySettings(reply.settings, reply.dirty);
+}
+
+async function disconnect() {
+  const t = transport;
+  transport = null; device = null; info = null;
+  setConnectedUI(false);
+  setStatus(false, "연결 안 됨");
+  if (t) await t.close();
+}
+
+function handleDisconnect(msg) {
+  if (!transport) return;
+  notice(msg, "warn");
+  disconnect();
+}
+
+function renderInfo() {
+  const rows = [
+    ["펌웨어", info.fw],
+    ["보드", BOARD_NAMES[info.board] || info.board],
+    ["하드웨어", info.hw],
+    ["배선", info.wiring],
+    ["슬라이더", SLIDER_NAMES[info.slider] || info.slider],
+    ["버튼", info.buttons + "개"],
+  ];
+  $("device-info").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(String(v))}</dd>`).join("");
+  $("card-device").classList.remove("hidden");
+}
+
+function renderSettings() {
+  const box = $("settings");
+  box.innerHTML = "";
+  const unknown = [];
+  for (const key of info.caps) {
+    const def = CONTROLS[key];
+    if (!def) { unknown.push(key); continue; }
+    const [min, max] = (info.limits && info.limits[key]) || [0, 1];
+    const wrap = document.createElement("div");
+    wrap.className = "setting";
+    wrap.innerHTML = `
+      <div class="setting-head"><label for="ctl-${key}">${def.label}</label><span class="val" id="val-${key}"></span></div>
+      <div class="help">${def.help}</div>`;
+    if (def.kind === "range") {
+      const r = el("input", { type: "range", id: "ctl-" + key, min, max, step: def.step });
+      r.addEventListener("pointerdown", () => { dragging = key; });
+      r.addEventListener("input", () => { showValue(key, +r.value); sendSet(key, +r.value); });
+      r.addEventListener("change", () => { dragging = null; sendSet(key, +r.value); });
+      wrap.append(r);
+    } else if (def.kind === "number") {
+      const r = el("input", { type: "range", id: "ctl-" + key, min, max, step: def.step });
+      const n = el("input", { type: "number", id: "num-" + key, min, max, step: def.step });
+      const row = el("div", { className: "row" });
+      row.append(n);
+      r.addEventListener("pointerdown", () => { dragging = key; });
+      r.addEventListener("input", () => { n.value = r.value; showValue(key, +r.value); sendSet(key, +r.value); });
+      r.addEventListener("change", () => { dragging = null; sendSet(key, +r.value); });
+      n.addEventListener("change", () => {
+        let v = Math.round(+n.value);
+        if (!Number.isFinite(v)) return;
+        v = Math.min(max, Math.max(min, v));
+        n.value = r.value = v; showValue(key, v); sendSet(key, v);
+      });
+      wrap.append(r, row);
+      if (def.presets) {
+        const p = el("div", { className: "presets" });
+        for (const v of def.presets.filter(v => v >= min && v <= max)) {
+          const b = el("button", { type: "button", textContent: v.toLocaleString() });
+          b.addEventListener("click", () => { n.value = r.value = v; showValue(key, v); sendSet(key, v); });
+          p.append(b);
+        }
+        wrap.append(p);
+      }
+    } else if (def.kind === "toggle") {
+      const lab = el("label", { className: "switch" });
+      const c = el("input", { type: "checkbox", id: "ctl-" + key });
+      c.addEventListener("change", () => { showValue(key, c.checked ? 1 : 0); sendSet(key, c.checked ? 1 : 0); });
+      lab.append(c, document.createTextNode("반전"));
+      wrap.append(lab);
+    }
+    box.append(wrap);
+  }
+  if (unknown.length) {
+    const n = el("p", { className: "help" });
+    n.textContent = "이 컨트롤러는 이 페이지가 아직 모르는 설정도 지원합니다: " + unknown.join(", ") + ". 최신 설정 페이지를 사용하세요.";
+    box.append(n);
+  }
+  $("card-settings").classList.remove("hidden");
+}
+
+function showValue(key, v) {
+  const def = CONTROLS[key];
+  const s = $("val-" + key);
+  if (def && s) s.textContent = def.format(v);
+}
+
+function applySettings(settings, dirty) {
+  if (!settings) return;
+  current = { ...settings };
+  for (const [key, v] of Object.entries(settings)) {
+    if (!CONTROLS[key] || !info.caps.includes(key)) continue;
+    showValue(key, v);
+    if (dragging === key) continue;   // do not fight the user's drag
+    const c = $("ctl-" + key), n = $("num-" + key);
+    if (c && c.type === "checkbox") c.checked = !!v;
+    else if (c) c.value = v;
+    if (n && document.activeElement !== n) n.value = v;
+  }
+  const st = $("save-state");
+  if (dirty) { st.textContent = "저장 안 된 변경 있음"; st.className = "dirty"; }
+  else { st.textContent = "컨트롤러에 저장됨"; st.className = "saved"; }
+}
+
+async function command(line, key) {
+  if (!device) return;
+  try {
+    const r = await device.send(line, key);
+    if (r === null) return;          // superseded by a newer value
+    if (!r.ok) { notice("컨트롤러가 거부했습니다: " + r.error, "err"); return; }
+    notice("");
+    applySettings(r.settings, r.dirty);
+  } catch (e) {
+    notice("응답이 없습니다 (" + e.message + "). 연결을 확인하세요.", "err");
+  }
+}
+
+// Coalesce rapid slider moves: at most one set per key in the queue
+function sendSet(key, v) { command(`set ${key} ${v}`, "set:" + key); }
+
+function el(tag, props) { const e = document.createElement(tag); Object.assign(e, props); return e; }
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+$("btn-connect").addEventListener("click", () => connect(false));
+$("btn-demo").addEventListener("click", () => connect(true));
+$("btn-disconnect").addEventListener("click", () => disconnect());
+$("btn-save").addEventListener("click", () => command("save"));
+$("btn-revert").addEventListener("click", () => command("revert"));
+$("btn-defaults").addEventListener("click", () => command("defaults"));
+
+if ("serial" in navigator) {
+  navigator.serial.addEventListener("disconnect", e => {
+    if (transport instanceof SerialTransport && e.target === transport.port) handleDisconnect("컨트롤러 USB가 뽑혔습니다.");
+  });
+} else {
+  notice("이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요. (데모 모드는 사용 가능)", "warn");
+}
+window.addEventListener("pointerup", () => { dragging = null; });
+</script>
+</body>
+</html>
