@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Infalsus 설정</title>
-<meta name="description" content="Infalsus 컨트롤러 설정 — LED 밝기, 슬라이더 감도, 방향을 USB로 바꿉니다.">
+<title>In Falsus Controller 설정</title>
+<meta name="description" content="In Falsus Controller settings — LED brightness, slider sensitivity and direction over USB.">
 <style>
 :root {
   --bg: #f5f6f8; --card: #ffffff; --ink: #1a2027; --muted: #5b6875; --line: #dde2e8;
@@ -26,7 +26,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
-  font: 15px/1.55 "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font: 15px/1.55 "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", system-ui, sans-serif;
 }
 main { max-width: 760px; margin: 0 auto; padding: 28px 16px 60px; }
 h1 { font-size: 24px; margin: 0 0 4px; }
@@ -80,59 +80,223 @@ pre.log {
 .hidden { display: none !important; }
 footer { color: var(--muted); font-size: 13px; margin-top: 20px; }
 code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+.topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.lang { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.lang select {
+  font: inherit; font-size: 14px; padding: 5px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+}
 </style>
 </head>
 <body>
 <main>
-  <h1>Infalsus 설정</h1>
-  <p class="sub">컨트롤러를 USB로 연결하고, LED 밝기와 슬라이더 감도·방향을 바꿉니다. 펌웨어 1.3.0 이상이 필요합니다.</p>
+  <div class="topbar">
+    <h1 data-i18n="title"></h1>
+    <label class="lang"><span data-i18n="language"></span>
+      <select id="lang">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+        <option value="zh">简体中文</option>
+        <option value="ja">日本語</option>
+      </select>
+    </label>
+  </div>
+  <p class="sub" data-i18n="subtitle"></p>
 
   <section class="card">
-    <h2>연결</h2>
+    <h2 data-i18n="conn_h"></h2>
     <div class="row">
-      <button id="btn-connect" class="primary">컨트롤러 연결</button>
-      <button id="btn-disconnect" disabled>연결 끊기</button>
-      <button id="btn-demo">데모 모드</button>
-      <span class="status"><span id="dot" class="dot"></span><span id="status-text">연결 안 됨</span></span>
+      <button id="btn-connect" class="primary" data-i18n="btn_connect"></button>
+      <button id="btn-disconnect" disabled data-i18n="btn_disconnect"></button>
+      <button id="btn-demo" data-i18n="btn_demo"></button>
+      <span class="status"><span id="dot" class="dot"></span><span id="status-text"></span></span>
     </div>
     <label class="help" style="display:flex;gap:6px;align-items:center;margin-top:10px">
-      <input type="checkbox" id="all-ports"> 목록에 컨트롤러가 안 보이면 체크하고 다시 연결 (모든 시리얼 포트 표시)
+      <input type="checkbox" id="all-ports"> <span data-i18n="all_ports"></span>
     </label>
     <div id="notice" class="notice"></div>
   </section>
 
   <section class="card hidden" id="card-device">
-    <h2>장치 정보</h2>
+    <h2 data-i18n="dev_h"></h2>
     <dl class="info" id="device-info"></dl>
   </section>
 
   <section class="card hidden" id="card-settings">
-    <h2>설정</h2>
+    <h2 data-i18n="set_h"></h2>
     <div id="settings"></div>
     <div class="actions">
-      <button id="btn-save" class="primary">컨트롤러에 저장</button>
-      <button id="btn-revert">저장된 값으로 되돌리기</button>
-      <button id="btn-defaults">기본값</button>
+      <button id="btn-save" class="primary" data-i18n="btn_save"></button>
+      <button id="btn-revert" data-i18n="btn_revert"></button>
+      <button id="btn-defaults" data-i18n="btn_defaults"></button>
       <span id="save-state"></span>
     </div>
-    <p class="help" style="margin-top:10px">바꾼 값은 바로 적용되지만, <b>저장</b>을 눌러야 USB를 뽑은 뒤에도 유지됩니다.</p>
+    <p class="help" style="margin-top:10px" data-i18n-html="save_hint"></p>
   </section>
 
   <section class="card">
     <details>
-      <summary>통신 기록</summary>
+      <summary data-i18n="log_h"></summary>
       <pre class="log" id="log"></pre>
     </details>
   </section>
 
-  <footer>
-    크롬·엣지(윈도우·맥·리눅스)에서 동작합니다. 사파리·파이어폭스는 Web Serial을 지원하지 않습니다.
-    PlatformIO 시리얼 모니터 등 다른 프로그램이 포트를 열고 있으면 연결되지 않습니다.
-  </footer>
+  <footer data-i18n="footer"></footer>
 </main>
-
 <script>
 "use strict";
+
+// ---------------------------------------------------------------------------
+// Translations. Keys missing in a language fall back to English.
+// ---------------------------------------------------------------------------
+const STR = {
+  ko: {
+    doc_title: "In Falsus Controller 설정", title: "In Falsus Controller 설정", language: "언어",
+    subtitle: "컨트롤러를 USB로 연결하고, LED 밝기와 슬라이더 감도·방향을 바꿉니다. 펌웨어 1.3.0 이상이 필요합니다.",
+    conn_h: "연결", btn_connect: "컨트롤러 연결", btn_disconnect: "연결 끊기", btn_demo: "데모 모드",
+    status_off: "연결 안 됨", status_checking: "연결됨, 확인 중…", status_on: "연결됨", status_demo: "데모 모드 (가짜 컨트롤러)",
+    all_ports: "목록에 컨트롤러가 안 보이면 체크하고 다시 연결 (모든 시리얼 포트 표시)",
+    dev_h: "장치 정보", set_h: "설정",
+    btn_save: "컨트롤러에 저장", btn_revert: "저장된 값으로 되돌리기", btn_defaults: "기본값",
+    save_hint: "바꾼 값은 바로 적용되지만, <b>저장</b>을 눌러야 USB를 뽑은 뒤에도 유지됩니다.",
+    log_h: "통신 기록",
+    footer: "크롬·엣지(윈도우·맥·리눅스)에서 동작합니다. 사파리·파이어폭스는 Web Serial을 지원하지 않습니다. PlatformIO 시리얼 모니터 등 다른 프로그램이 포트를 열고 있으면 연결되지 않습니다.",
+    row_fw: "펌웨어", row_board: "보드", row_hw: "하드웨어", row_slider: "슬라이더", row_buttons: "버튼",
+    buttons_n: "{n}개",
+    slider_pot: "슬라이드 가변저항",
+    brightness_label: "LED 밝기",
+    brightness_help: "버튼을 눌렀을 때 LED 밝기. 움직이는 동안 LED가 전부 켜져 미리 보여 줍니다. 0이면 꺼짐.",
+    px_label: "슬라이더 감도 (전체 이동 = 픽셀)",
+    px_help: "슬라이더를 끝에서 끝까지 움직였을 때 마우스가 가는 픽셀 수. 클수록 조금만 밀어도 많이 움직입니다. 기본 3840.",
+    reverse_label: "슬라이더 방향 반전",
+    reverse_help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
+    reverse_toggle: "반전", on: "켜짐", off: "꺼짐",
+    dirty: "저장 안 된 변경 있음", saved: "컨트롤러에 저장됨",
+    no_serial: "이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요.",
+    demo_ok: " (데모 모드는 사용 가능)",
+    connect_fail: "연결하지 못했습니다: {msg} — 다른 프로그램(시리얼 모니터 등)이 포트를 쓰고 있지 않은지 확인하세요.",
+    no_reply: "컨트롤러가 응답하지 않습니다. 펌웨어 1.2 이하이거나 다른 장치일 수 있습니다. 펌웨어를 1.3.0 이상으로 올려 주세요.",
+    bad_reply: "예상하지 못한 응답입니다. 펌웨어를 1.3.0 이상으로 올려 주세요.",
+    proto: "이 페이지가 모르는 통신 형식(proto {p})입니다. 최신 설정 페이지를 사용하세요.",
+    lost: "컨트롤러 연결이 끊겼습니다.", unplugged: "컨트롤러 USB가 뽑혔습니다.",
+    rejected: "컨트롤러가 거부했습니다: {msg}", timeout: "응답이 없습니다 ({msg}). 연결을 확인하세요.",
+    unknown_caps: "이 컨트롤러는 이 페이지가 아직 모르는 설정도 지원합니다: {list}. 최신 설정 페이지를 사용하세요.",
+  },
+  en: {
+    doc_title: "In Falsus Controller Settings", title: "In Falsus Controller Settings", language: "Language",
+    subtitle: "Connect the controller over USB to change the LED brightness and the slider's sensitivity and direction. Requires firmware 1.3.0 or later.",
+    conn_h: "Connection", btn_connect: "Connect controller", btn_disconnect: "Disconnect", btn_demo: "Demo mode",
+    status_off: "Not connected", status_checking: "Connected, checking…", status_on: "Connected", status_demo: "Demo mode (simulated controller)",
+    all_ports: "If the controller is not listed, tick this and connect again (shows every serial port)",
+    dev_h: "Device", set_h: "Settings",
+    btn_save: "Save to controller", btn_revert: "Revert to saved", btn_defaults: "Defaults",
+    save_hint: "Changes apply right away, but they only survive unplugging after you press <b>Save</b>.",
+    log_h: "Communication log",
+    footer: "Works in Chrome and Edge on Windows, macOS and Linux. Safari and Firefox do not support Web Serial. It cannot connect while another program, such as the PlatformIO serial monitor, has the port open.",
+    row_fw: "Firmware", row_board: "Board", row_hw: "Hardware", row_slider: "Slider", row_buttons: "Buttons",
+    buttons_n: "{n}",
+    slider_pot: "Slide potentiometer",
+    brightness_label: "LED brightness",
+    brightness_help: "Brightness of the button LEDs. Every LED lights up while you drag this so you can preview it. 0 turns them off.",
+    px_label: "Slider sensitivity (full travel = pixels)",
+    px_help: "How many pixels the mouse moves when the slider goes from one end to the other. Higher values move the cursor further for the same push. Default 3840.",
+    reverse_label: "Reverse slider direction",
+    reverse_help: "Turn this on if the cursor moves left when you push the slider right.",
+    reverse_toggle: "Reverse", on: "On", off: "Off",
+    dirty: "Unsaved changes", saved: "Saved on the controller",
+    no_serial: "This browser does not support Web Serial. Open this page in Chrome or Edge.",
+    demo_ok: " (Demo mode still works.)",
+    connect_fail: "Could not connect: {msg}. Check that no other program, such as a serial monitor, is using the port.",
+    no_reply: "The controller did not answer. It may run firmware 1.2 or older, or be a different device. Update the firmware to 1.3.0 or later.",
+    bad_reply: "Unexpected reply. Update the firmware to 1.3.0 or later.",
+    proto: "This page does not understand protocol {p}. Use the latest settings page.",
+    lost: "Lost the connection to the controller.", unplugged: "The controller was unplugged.",
+    rejected: "The controller rejected the change: {msg}", timeout: "No reply ({msg}). Check the connection.",
+    unknown_caps: "This controller also has settings this page does not know yet: {list}. Use the latest settings page.",
+  },
+  zh: {
+    doc_title: "In Falsus Controller 设置", title: "In Falsus Controller 设置", language: "语言",
+    subtitle: "通过 USB 连接控制器，调整 LED 亮度以及滑条的灵敏度和方向。需要固件 1.3.0 或更高版本。",
+    conn_h: "连接", btn_connect: "连接控制器", btn_disconnect: "断开连接", btn_demo: "演示模式",
+    status_off: "未连接", status_checking: "已连接，正在检查…", status_on: "已连接", status_demo: "演示模式（模拟控制器）",
+    all_ports: "如果列表中没有控制器，请勾选此项后重新连接（显示所有串口）",
+    dev_h: "设备信息", set_h: "设置",
+    btn_save: "保存到控制器", btn_revert: "恢复为已保存的值", btn_defaults: "恢复默认",
+    save_hint: "修改会立即生效，但需要点击<b>保存</b>，拔掉 USB 后才会保留。",
+    log_h: "通信记录",
+    footer: "支持 Windows、macOS、Linux 上的 Chrome 和 Edge。Safari 和 Firefox 不支持 Web Serial。如果其他程序（如 PlatformIO 串口监视器）正在占用端口，将无法连接。",
+    row_fw: "固件", row_board: "主控板", row_hw: "硬件", row_slider: "滑条", row_buttons: "按键",
+    buttons_n: "{n} 个",
+    slider_pot: "滑动电位器",
+    brightness_label: "LED 亮度",
+    brightness_help: "按下按键时 LED 的亮度。拖动时所有 LED 会亮起以便预览。0 为关闭。",
+    px_label: "滑条灵敏度（全行程 = 像素）",
+    px_help: "滑条从一端移到另一端时鼠标移动的像素数。数值越大，同样的推动距离光标移动越远。默认 3840。",
+    reverse_label: "反转滑条方向",
+    reverse_help: "如果向右推滑条时光标向左移动，请打开此项。",
+    reverse_toggle: "反转", on: "开", off: "关",
+    dirty: "有未保存的更改", saved: "已保存到控制器",
+    no_serial: "此浏览器不支持 Web Serial。请使用 Chrome 或 Edge 打开本页面。",
+    demo_ok: "（仍可使用演示模式）",
+    connect_fail: "无法连接：{msg}。请确认没有其他程序（如串口监视器）正在使用该端口。",
+    no_reply: "控制器没有响应。可能是 1.2 或更早的固件，或者是其他设备。请将固件更新到 1.3.0 或更高版本。",
+    bad_reply: "收到意外的响应。请将固件更新到 1.3.0 或更高版本。",
+    proto: "本页面不支持通信协议 {p}。请使用最新的设置页面。",
+    lost: "与控制器的连接已断开。", unplugged: "控制器的 USB 已拔出。",
+    rejected: "控制器拒绝了此更改：{msg}", timeout: "没有响应（{msg}）。请检查连接。",
+    unknown_caps: "该控制器还支持本页面尚不认识的设置：{list}。请使用最新的设置页面。",
+  },
+  ja: {
+    doc_title: "In Falsus Controller 設定", title: "In Falsus Controller 設定", language: "言語",
+    subtitle: "コントローラーを USB で接続し、LED の明るさとスライダーの感度・向きを変更します。ファームウェア 1.3.0 以降が必要です。",
+    conn_h: "接続", btn_connect: "コントローラーを接続", btn_disconnect: "切断", btn_demo: "デモモード",
+    status_off: "未接続", status_checking: "接続済み、確認中…", status_on: "接続済み", status_demo: "デモモード（仮想コントローラー）",
+    all_ports: "一覧にコントローラーが出ない場合はチェックして再接続（すべてのシリアルポートを表示）",
+    dev_h: "デバイス情報", set_h: "設定",
+    btn_save: "コントローラーに保存", btn_revert: "保存済みの値に戻す", btn_defaults: "初期値",
+    save_hint: "変更はすぐに反映されますが、USB を抜いた後も残すには<b>保存</b>を押してください。",
+    log_h: "通信ログ",
+    footer: "Windows・macOS・Linux の Chrome と Edge で動作します。Safari と Firefox は Web Serial に対応していません。PlatformIO のシリアルモニターなど他のプログラムがポートを開いていると接続できません。",
+    row_fw: "ファームウェア", row_board: "ボード", row_hw: "ハードウェア", row_slider: "スライダー", row_buttons: "ボタン",
+    buttons_n: "{n} 個",
+    slider_pot: "スライド可変抵抗",
+    brightness_label: "LED の明るさ",
+    brightness_help: "ボタンを押したときの LED の明るさ。動かしている間はすべての LED が点灯してプレビューできます。0 で消灯。",
+    px_label: "スライダー感度（全ストローク = ピクセル）",
+    px_help: "スライダーを端から端まで動かしたときにマウスが動くピクセル数。大きいほど同じ動きでカーソルが大きく動きます。初期値 3840。",
+    reverse_label: "スライダーの向きを反転",
+    reverse_help: "スライダーを右に動かしたときにカーソルが左に動く場合はオンにしてください。",
+    reverse_toggle: "反転", on: "オン", off: "オフ",
+    dirty: "未保存の変更あり", saved: "コントローラーに保存済み",
+    no_serial: "このブラウザーは Web Serial に対応していません。Chrome または Edge で開いてください。",
+    demo_ok: "（デモモードは使えます）",
+    connect_fail: "接続できませんでした：{msg}。シリアルモニターなど他のプログラムがポートを使っていないか確認してください。",
+    no_reply: "コントローラーが応答しません。ファームウェア 1.2 以前か、別のデバイスの可能性があります。ファームウェアを 1.3.0 以降に更新してください。",
+    bad_reply: "予期しない応答です。ファームウェアを 1.3.0 以降に更新してください。",
+    proto: "このページは通信形式 {p} に対応していません。最新の設定ページを使ってください。",
+    lost: "コントローラーとの接続が切れました。", unplugged: "コントローラーの USB が抜かれました。",
+    rejected: "コントローラーが変更を拒否しました：{msg}", timeout: "応答がありません（{msg}）。接続を確認してください。",
+    unknown_caps: "このコントローラーには、このページがまだ対応していない設定もあります：{list}。最新の設定ページを使ってください。",
+  },
+};
+const LANGS = Object.keys(STR);
+const HTML_LANG = { ko: "ko", en: "en", zh: "zh-Hans", ja: "ja" };
+
+function pickLang() {
+  try { const saved = localStorage.getItem("ifc-lang"); if (LANGS.includes(saved)) return saved; } catch (_) {}
+  for (const l of navigator.languages || [navigator.language || "en"]) {
+    const base = String(l).toLowerCase().slice(0, 2);
+    if (LANGS.includes(base)) return base;
+  }
+  return "en";
+}
+let lang = pickLang();
+
+function t(key, vars = {}) {
+  let s = (STR[lang] && STR[lang][key]) ?? STR.en[key] ?? key;
+  for (const [k, v] of Object.entries(vars)) s = s.replace("{" + k + "}", v);
+  return s;
+}
 // ---------------------------------------------------------------------------
 // What this page understands. The firmware reports "proto"; anything else is
 // refused so an old page never sends commands a newer firmware reads
@@ -144,7 +308,7 @@ const BOARD_NAMES = {
   "rp2040-promicro": "RP2040 Pro Micro",
   "nrf52840-nicenano": "nice!nano (nRF52840)",
 };
-const SLIDER_NAMES = { pot: "슬라이드 가변저항" };
+const SLIDER_KEYS = { pot: "slider_pot" };
 
 // USB vendor IDs used to pre-filter the port chooser
 const USB_FILTERS = [
@@ -153,26 +317,11 @@ const USB_FILTERS = [
   { usbVendorId: 0x239A },  // Adafruit (nice!nano bootloader / core)
 ];
 
+// Labels and help text come from STR (<key>_label / <key>_help)
 const CONTROLS = {
-  brightness: {
-    label: "LED 밝기",
-    help: "버튼을 눌렀을 때 LED 밝기. 움직이는 동안 LED가 전부 켜져 미리 보여 줍니다. 0이면 꺼짐.",
-    kind: "range", step: 1,
-    format: v => `${v} / 255 (${Math.round(v / 2.55)}%)`,
-  },
-  px: {
-    label: "슬라이더 감도 (전체 이동 = 픽셀)",
-    help: "슬라이더를 끝에서 끝까지 움직였을 때 마우스가 가는 픽셀 수. 클수록 조금만 밀어도 많이 움직입니다. 기본 3840.",
-    kind: "number", step: 10,
-    presets: [1920, 2880, 3840, 5760, 7680],
-    format: v => `${v} px`,
-  },
-  reverse: {
-    label: "슬라이더 방향 반전",
-    help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
-    kind: "toggle",
-    format: v => (v ? "켜짐" : "꺼짐"),
-  },
+  brightness: { kind: "range", step: 1, format: v => `${v} / 255 (${Math.round(v / 2.55)}%)` },
+  px: { kind: "number", step: 10, presets: [1920, 2880, 3840, 5760, 7680], format: v => `${v} px` },
+  reverse: { kind: "toggle", format: v => t(v ? "on" : "off") },
 };
 
 // ---------------------------------------------------------------------------
@@ -213,7 +362,7 @@ class SerialTransport {
         if (this.closing) break;
       }
     } catch (e) {
-      if (!this.closing) log("! 읽기 오류: " + e.message);
+      if (!this.closing) log("! read error: " + e.message);
     }
     if (!this.closing) this.onClose();
   }
@@ -319,6 +468,7 @@ class Device {
 // ---------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
 let device = null, transport = null, info = null, current = {}, dragging = null;
+let demoMode = false, lastDirty = false, noSerial = false;
 
 function log(s) {
   const el = $("log");
@@ -339,7 +489,7 @@ function setConnectedUI(on) {
 async function connect(demo) {
   notice("");
   if (!demo && !("serial" in navigator)) {
-    notice("이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요.", "err");
+    notice(t("no_serial"), "err");
     return;
   }
   try {
@@ -353,58 +503,58 @@ async function connect(demo) {
     await transport.open();
   } catch (e) {
     if (e && e.name === "NotFoundError") return;   // chooser cancelled
-    notice("연결하지 못했습니다: " + (e.message || e) +
-           " — 다른 프로그램(시리얼 모니터 등)이 포트를 쓰고 있지 않은지 확인하세요.", "err");
+    notice(t("connect_fail", { msg: e.message || e }), "err");
     transport = null;
     return;
   }
-  transport.onClose = () => { handleDisconnect("컨트롤러 연결이 끊겼습니다."); };
+  transport.onClose = () => { handleDisconnect("lost"); };
   device = new Device(transport);
   setConnectedUI(true);
-  setStatus(true, demo ? "데모 모드" : "연결됨, 확인 중…");
+  demoMode = demo;
+  setStatus(true, t("status_checking"));
 
   let reply;
   try { reply = await device.send("info"); }
   catch (_) {
-    notice("컨트롤러가 응답하지 않습니다. 펌웨어 1.2 이하이거나 다른 장치일 수 있습니다. 펌웨어를 1.3.0 이상으로 올려 주세요.", "err");
+    notice(t("no_reply"), "err");
     return disconnect();
   }
   if (!reply || !reply.ok || reply.type !== "info") {
-    notice("예상하지 못한 응답입니다. 펌웨어를 1.3.0 이상으로 올려 주세요.", "err");
+    notice(t("bad_reply"), "err");
     return disconnect();
   }
   if (!PROTO_SUPPORTED.includes(reply.proto)) {
-    notice(`이 페이지가 모르는 통신 형식(proto ${reply.proto})입니다. 페이지를 새로 고치거나 최신 설정 페이지를 사용하세요.`, "err");
+    notice(t("proto", { p: reply.proto }), "err");
     return disconnect();
   }
   info = reply;
-  setStatus(true, demo ? "데모 모드 (가짜 컨트롤러)" : "연결됨");
+  setStatus(true, t(demo ? "status_demo" : "status_on"));
   renderInfo();
   renderSettings();
   applySettings(reply.settings, reply.dirty);
 }
 
 async function disconnect() {
-  const t = transport;
+  const tr = transport;
   transport = null; device = null; info = null;
   setConnectedUI(false);
-  setStatus(false, "연결 안 됨");
-  if (t) await t.close();
+  setStatus(false, t("status_off"));
+  if (tr) await tr.close();
 }
 
-function handleDisconnect(msg) {
+function handleDisconnect(key) {
   if (!transport) return;
-  notice(msg, "warn");
+  notice(t(key), "warn");
   disconnect();
 }
 
 function renderInfo() {
   const rows = [
-    ["펌웨어", info.fw],
-    ["보드", BOARD_NAMES[info.board] || info.board],
-    ["하드웨어", "hw" + info.hw],
-    ["슬라이더", SLIDER_NAMES[info.slider] || info.slider],
-    ["버튼", info.buttons + "개"],
+    [t("row_fw"), info.fw],
+    [t("row_board"), BOARD_NAMES[info.board] || info.board],
+    [t("row_hw"), "hw" + info.hw],
+    [t("row_slider"), SLIDER_KEYS[info.slider] ? t(SLIDER_KEYS[info.slider]) : info.slider],
+    [t("row_buttons"), t("buttons_n", { n: info.buttons })],
   ];
   $("device-info").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(String(v))}</dd>`).join("");
   $("card-device").classList.remove("hidden");
@@ -421,8 +571,8 @@ function renderSettings() {
     const wrap = document.createElement("div");
     wrap.className = "setting";
     wrap.innerHTML = `
-      <div class="setting-head"><label for="ctl-${key}">${def.label}</label><span class="val" id="val-${key}"></span></div>
-      <div class="help">${def.help}</div>`;
+      <div class="setting-head"><label for="ctl-${key}">${t(key + "_label")}</label><span class="val" id="val-${key}"></span></div>
+      <div class="help">${t(key + "_help")}</div>`;
     if (def.kind === "range") {
       const r = el("input", { type: "range", id: "ctl-" + key, min, max, step: def.step });
       r.addEventListener("pointerdown", () => { dragging = key; });
@@ -457,14 +607,14 @@ function renderSettings() {
       const lab = el("label", { className: "switch" });
       const c = el("input", { type: "checkbox", id: "ctl-" + key });
       c.addEventListener("change", () => { showValue(key, c.checked ? 1 : 0); sendSet(key, c.checked ? 1 : 0); });
-      lab.append(c, document.createTextNode("반전"));
+      lab.append(c, document.createTextNode(t("reverse_toggle")));
       wrap.append(lab);
     }
     box.append(wrap);
   }
   if (unknown.length) {
     const n = el("p", { className: "help" });
-    n.textContent = "이 컨트롤러는 이 페이지가 아직 모르는 설정도 지원합니다: " + unknown.join(", ") + ". 최신 설정 페이지를 사용하세요.";
+    n.textContent = t("unknown_caps", { list: unknown.join(", ") });
     box.append(n);
   }
   $("card-settings").classList.remove("hidden");
@@ -489,8 +639,8 @@ function applySettings(settings, dirty) {
     if (n && document.activeElement !== n) n.value = v;
   }
   const st = $("save-state");
-  if (dirty) { st.textContent = "저장 안 된 변경 있음"; st.className = "dirty"; }
-  else { st.textContent = "컨트롤러에 저장됨"; st.className = "saved"; }
+  lastDirty = !!dirty;
+  renderSaveState();
 }
 
 async function command(line, key) {
@@ -498,11 +648,11 @@ async function command(line, key) {
   try {
     const r = await device.send(line, key);
     if (r === null) return;          // superseded by a newer value
-    if (!r.ok) { notice("컨트롤러가 거부했습니다: " + r.error, "err"); return; }
+    if (!r.ok) { notice(t("rejected", { msg: r.error }), "err"); return; }
     notice("");
     applySettings(r.settings, r.dirty);
   } catch (e) {
-    notice("응답이 없습니다 (" + e.message + "). 연결을 확인하세요.", "err");
+    notice(t("timeout", { msg: e.message }), "err");
   }
 }
 
@@ -511,6 +661,36 @@ function sendSet(key, v) { command(`set ${key} ${v}`, "set:" + key); }
 
 function el(tag, props) { const e = document.createElement(tag); Object.assign(e, props); return e; }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+
+function renderSaveState() {
+  const st = $("save-state");
+  st.textContent = t(lastDirty ? "dirty" : "saved");
+  st.className = lastDirty ? "dirty" : "saved";
+}
+
+function applyLanguage() {
+  document.documentElement.lang = HTML_LANG[lang];
+  document.title = t("doc_title");
+  $("lang").value = lang;
+  document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(e => { e.innerHTML = t(e.dataset.i18nHtml); });
+  if (info) {
+    setStatus(true, t(demoMode ? "status_demo" : "status_on"));
+    renderInfo();
+    renderSettings();
+    applySettings(current, lastDirty);
+  } else {
+    setStatus(false, t("status_off"));
+    if (noSerial) notice(t("no_serial") + t("demo_ok"), "warn");
+  }
+}
+
+$("lang").addEventListener("change", e => {
+  lang = e.target.value;
+  try { localStorage.setItem("ifc-lang", lang); } catch (_) {}
+  applyLanguage();
+});
 
 $("btn-connect").addEventListener("click", () => connect(false));
 $("btn-demo").addEventListener("click", () => connect(true));
@@ -521,12 +701,13 @@ $("btn-defaults").addEventListener("click", () => command("defaults"));
 
 if ("serial" in navigator) {
   navigator.serial.addEventListener("disconnect", e => {
-    if (transport instanceof SerialTransport && e.target === transport.port) handleDisconnect("컨트롤러 USB가 뽑혔습니다.");
+    if (transport instanceof SerialTransport && e.target === transport.port) handleDisconnect("unplugged");
   });
 } else {
-  notice("이 브라우저는 Web Serial을 지원하지 않습니다. 크롬이나 엣지로 열어 주세요. (데모 모드는 사용 가능)", "warn");
+  noSerial = true;
 }
 window.addEventListener("pointerup", () => { dragging = null; });
+applyLanguage();
 </script>
 </body>
 </html>
