@@ -44,7 +44,7 @@
 // Adding a field: append it, bump SETTINGS_VERSION and give it a default in
 // settings_defaults(); an older record is then ignored and defaults apply.
 #define SETTINGS_MAGIC    0x49   // 'I'
-#define SETTINGS_VERSION  2
+#define SETTINGS_VERSION  3
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
     uint8_t  version;
@@ -53,13 +53,20 @@ typedef struct __attribute__((packed)) {
     uint16_t px_per_travel;  // pixels for the full slider travel
     uint16_t center;         // slider position (0-32767, before the direction
                              // flip) that the re-centre chord treats as centre
+    uint8_t  recenter_keys;  // re-centre chord: 5 = ASDF + Shift/Space, 6 = all
+    uint8_t  recenter_taps;  // re-centre chord taps (3-5)
 } settings_t;
 
-// Record written by firmware 1.3.0 builds before "center" existed
+// Earlier records from pre-release 1.3.0 builds (version 1: no center,
+// version 2: no re-centre chord choice); their values are kept on upgrade
 typedef struct __attribute__((packed)) {
     uint8_t  magic, version, brightness, reverse;
     uint16_t px_per_travel;
 } settings_v1_t;
+typedef struct __attribute__((packed)) {
+    uint8_t  magic, version, brightness, reverse;
+    uint16_t px_per_travel, center;
+} settings_v2_t;
 
 static const char* SETTINGS_FILE   = "/settings";
 static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // firmware 1.2 and older
@@ -74,24 +81,36 @@ static void settings_defaults(settings_t& s) {
     s.reverse       = 0;
     s.px_per_travel = MOUSE_REL_PIXELS_PER_TRAVEL;
     s.center        = SLIDER_CENTER_DEFAULT;
+    s.recenter_keys = RECENTER_KEYS_DEFAULT;
+    s.recenter_taps = RECENTER_TAPS_DEFAULT;
 }
 
 static bool settings_valid(const settings_t& s) {
     return s.magic == SETTINGS_MAGIC && s.version == SETTINGS_VERSION &&
            s.reverse <= 1 &&
            s.px_per_travel >= PX_PER_TRAVEL_MIN && s.px_per_travel <= PX_PER_TRAVEL_MAX &&
-           s.center <= 32767;
+           s.center <= 32767 &&
+           (s.recenter_keys == 5 || s.recenter_keys == 6) &&
+           s.recenter_taps >= RECENTER_TAPS_MIN && s.recenter_taps <= RECENTER_TAPS_MAX;
 }
 
 static void load_settings() {
     settings_t s;
     if (!settings_read(SETTINGS_FILE, &s, sizeof(s)) || !settings_valid(s)) {
         settings_defaults(s);
+        settings_v2_t v2;
         settings_v1_t v1;
         uint8_t b;
-        if (settings_read(SETTINGS_FILE, &v1, sizeof(v1)) &&
+        if (settings_read(SETTINGS_FILE, &v2, sizeof(v2)) &&
+            v2.magic == SETTINGS_MAGIC && v2.version == 2) {
+            s.brightness    = v2.brightness;       // keep the older record's values
+            s.reverse       = v2.reverse <= 1 ? v2.reverse : 0;
+            if (v2.px_per_travel >= PX_PER_TRAVEL_MIN && v2.px_per_travel <= PX_PER_TRAVEL_MAX)
+                s.px_per_travel = v2.px_per_travel;
+            if (v2.center <= 32767) s.center = v2.center;
+        } else if (settings_read(SETTINGS_FILE, &v1, sizeof(v1)) &&
             v1.magic == SETTINGS_MAGIC && v1.version == 1) {
-            s.brightness    = v1.brightness;       // keep the older record's values
+            s.brightness    = v1.brightness;
             s.reverse       = v1.reverse <= 1 ? v1.reverse : 0;
             if (v1.px_per_travel >= PX_PER_TRAVEL_MIN && v1.px_per_travel <= PX_PER_TRAVEL_MAX)
                 s.px_per_travel = v1.px_per_travel;
@@ -374,8 +393,8 @@ static void send_rel_dx(int32_t units, int8_t max_step = 127, uint8_t pace_ms = 
 }
 
 // --------------------------------------------------------
-// Manual re-centre: tap all RECENTER_CHORD_MASK buttons plus at least one
-// RECENTER_CHORD_ANY_MASK button together RECENTER_TAPS times within
+// Manual re-centre: tap the chosen chord (5 keys: A S D F plus Shift or
+// Space; 6 keys: all buttons) together recenter_taps times within
 // RECENTER_WINDOW_MS. Sends one relative move equal to the slider's
 // offset from centre, so a game that has just warped its cursor to the
 // centre ends up aligned with where the slider physically is.
@@ -387,8 +406,9 @@ static void handle_recenter_chord() {
 
     uint8_t down = 0;
     for (uint8_t i = 0; i < NUM_BUTTONS; i++) if (btn_pressed[i]) down |= (1 << i);
-    bool chord = (down & RECENTER_CHORD_MASK) == RECENTER_CHORD_MASK &&
-                 (down & RECENTER_CHORD_ANY_MASK) != 0;
+    bool chord = (cfg.recenter_keys == 6)
+        ? (down & RECENTER_6_MASK) == RECENTER_6_MASK
+        : (down & RECENTER_5_MASK) == RECENTER_5_MASK && (down & RECENTER_5_ANY_MASK) != 0;
     uint32_t now = millis();
 
     if (chord && !chord_was_down) {
@@ -397,7 +417,7 @@ static void handle_recenter_chord() {
             first_tap = now;
         }
         taps++;
-        if (taps >= RECENTER_TAPS) {
+        if (taps >= cfg.recenter_taps) {
             taps = 0;
             if (slider_last_x != 0xFFFF) {
                 Serial.print("recenter: dx units=");
@@ -541,6 +561,8 @@ static void brightness_mode() {
 //   set px <min-max>         pixels for the full slider travel
 //   set reverse <0|1>        flip the slider direction
 //   set center <0-32767>     slider position used as centre by the re-centre chord
+//   set recenter_keys <5|6>  re-centre chord: 5 = A S D F + Shift/Space, 6 = all buttons
+//   set recenter_taps <3-5>  how many times the chord is tapped (within 0.5 s)
 //   center                   take the current slider position as centre
 //   pos                      current slider position (0-32767, -1 = unknown)
 //   save                     write current settings to flash
@@ -554,6 +576,8 @@ static void print_settings_json(const settings_t& s) {
     Serial.print(",\"px\":");          Serial.print(s.px_per_travel);
     Serial.print(",\"reverse\":");     Serial.print(s.reverse);
     Serial.print(",\"center\":");      Serial.print(s.center);
+    Serial.print(",\"recenter_keys\":"); Serial.print(s.recenter_keys);
+    Serial.print(",\"recenter_taps\":"); Serial.print(s.recenter_taps);
     Serial.print("}");
 }
 
@@ -584,10 +608,12 @@ static void reply_info() {
     Serial.print(",\"hw\":\"" HW_REV "\"");
     Serial.print(",\"slider\":\"" SLIDER_TYPE "\"");
     Serial.print(",\"buttons\":"); Serial.print(NUM_BUTTONS);
-    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\",\"center\"]");
+    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\",\"center\",\"recenter_keys\",\"recenter_taps\"]");
     Serial.print(",\"limits\":{\"brightness\":[0,255],\"px\":[");
     Serial.print(PX_PER_TRAVEL_MIN); Serial.print(","); Serial.print(PX_PER_TRAVEL_MAX);
-    Serial.print("],\"reverse\":[0,1],\"center\":[0,32767]}");
+    Serial.print("],\"reverse\":[0,1],\"center\":[0,32767],\"recenter_keys\":[5,6],\"recenter_taps\":[");
+    Serial.print(RECENTER_TAPS_MIN); Serial.print(","); Serial.print(RECENTER_TAPS_MAX);
+    Serial.print("]}");
     Serial.print(",\"defaults\":"); print_settings_json(d);
     Serial.print(",\"settings\":"); print_settings_json(cfg);
     Serial.print(",\"dirty\":");    Serial.print(settings_dirty() ? "true" : "false");
@@ -659,6 +685,12 @@ static void run_command(char* line) {
         } else if (!strcmp(key, "px")) {
             if (v < PX_PER_TRAVEL_MIN || v > PX_PER_TRAVEL_MAX) { reply_error("px out of range"); return; }
             cfg.px_per_travel = (uint16_t)v;
+        } else if (!strcmp(key, "recenter_keys")) {
+            if (v != 5 && v != 6) { reply_error("recenter_keys must be 5 or 6"); return; }
+            cfg.recenter_keys = (uint8_t)v;
+        } else if (!strcmp(key, "recenter_taps")) {
+            if (v < RECENTER_TAPS_MIN || v > RECENTER_TAPS_MAX) { reply_error("recenter_taps out of range"); return; }
+            cfg.recenter_taps = (uint8_t)v;
         } else if (!strcmp(key, "center")) {
             if (v < 0 || v > 32767) { reply_error("center out of range"); return; }
             cfg.center = (uint16_t)v;

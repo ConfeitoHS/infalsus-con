@@ -215,21 +215,27 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 #define PX_PER_TRAVEL_MIN           100
 #define PX_PER_TRAVEL_MAX           30000
 
-// Manual re-centre: tap the buttons in RECENTER_CHORD_MASK together
-// RECENTER_TAPS times within RECENTER_WINDOW_MS to send one relative move
-// equal to the slider's offset from centre. Use right after the game has
-// warped its cursor to the centre so its position matches the slider.
-// Mask bit i = button i+1. All of CHORD_MASK plus at least one of ANY_MASK
-// must be down: 0b011110 = A S D F, 0b100001 = Shift or Space.
-#define RECENTER_CHORD_MASK     0b011110
-#define RECENTER_CHORD_ANY_MASK 0b100001
+// Manual re-centre: tap the chord together N times within
+// RECENTER_WINDOW_MS to send one relative move equal to the slider's
+// offset from centre. Use right after the game has warped its cursor to
+// the centre so its position matches the slider.
+// Two chords, chosen by the "recenter_keys" setting (5 or 6):
+//   5 keys: A S D F plus Shift or Space   (mask 0b011110 + any of 0b100001)
+//   6 keys: all six buttons               (mask 0b111111)
+// Mask bit i = button i+1. Tap count N is the "recenter_taps" setting.
+#define RECENTER_5_MASK         0b011110
+#define RECENTER_5_ANY_MASK     0b100001
+#define RECENTER_6_MASK         0b111111
+#define RECENTER_KEYS_DEFAULT   5
+#define RECENTER_TAPS_DEFAULT   4
+#define RECENTER_TAPS_MIN       3
+#define RECENTER_TAPS_MAX       5
 // Slider position (0-32767 over the full electrical travel, before the
 // direction flip) the re-centre chord treats as the centre. Default = the
 // pot's electrical middle; the "center" setting overrides it when the
 // housing's reachable span is not centred on the pot.
 #define SLIDER_CENTER_DEFAULT   16384
 
-#define RECENTER_TAPS       4
 #define RECENTER_WINDOW_MS  500
 
 // The re-centre move is sent as small steps spaced out in time, like a
