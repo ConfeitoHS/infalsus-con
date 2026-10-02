@@ -56,7 +56,7 @@ pio run -e reset-rp2040-hw1_1 -t upload      # 또는 reset-nrf52840-hw1_1, rese
 - 부팅 시 LED1→6이 순서대로 한 번씩 켜집니다 (배선 확인용).
 - 버튼을 누르면 해당 키가 전송되고 LED가 켜집니다. 6키 동시 입력, 1000Hz 폴링.
 - 슬라이더 움직임이 마우스 X 이동(상대)으로 전송됩니다. `MOUSE_MODE_RELATIVE 0`으로 바꾸면 절대 좌표 모드.
-- **수동 센터 보정**: 게임이 커서를 가운데로 옮긴 직후 **A S D F + (Shift 또는 Space) 다섯 개를 동시에, 0.5초 안에 4번** 누르면, 슬라이더가 가운데에서 떨어진 만큼을 상대 이동 한 번으로 보내 게임 커서와 슬라이더를 맞춥니다. LED가 두 번 깜빡이면 전송 완료.
+- **수동 센터 보정**: 게임이 커서를 가운데로 옮긴 직후 **A S D F + (Shift 또는 Space) 다섯 개를 동시에, 0.5초 안에 4번** 누르면(키 조합은 5키·6키, 횟수는 3~5번 중 설정 가능), 슬라이더가 가운데에서 떨어진 만큼을 상대 이동 한 번으로 보내 게임 커서와 슬라이더를 맞춥니다. LED가 두 번 깜빡이면 전송 완료.
 - 슬라이더 유닛은 3.5mm 4극 잭으로 분리됩니다. 케이블을 꽂으면 LED가 한 번, 뽑으면 두 번 깜빡이고, 뽑힌 동안은 마우스를 보내지 않습니다.
 
 ### LED 밝기 설정
@@ -69,7 +69,7 @@ pio run -e reset-rp2040-hw1_1 -t upload      # 또는 reset-nrf52840-hw1_1, rese
 
 ## 웹 설정 페이지
 
-크롬이나 엣지에서 **https://confeitohs.github.io/infalsus-con/config/** 를 열고 "컨트롤러 연결"을 누르면 LED 밝기, 슬라이더 감도(전체 이동 픽셀 수), 방향 반전, 센터 위치를 바꾸고 저장할 수 있습니다. 설치할 것은 없고, 윈도우·맥·리눅스 모두 됩니다. 오른쪽 위에서 한국어·English·简体中文·日本語를 고를 수 있고, 처음에는 브라우저 언어를 따릅니다. 펌웨어 1.3.0 이상이 필요합니다.
+크롬이나 엣지에서 **https://confeitohs.github.io/infalsus-con/config/** 를 열고 "컨트롤러 연결"을 누르면 LED 밝기, 슬라이더 감도(전체 이동 픽셀 수), 방향 반전, 센터 위치, 센터 보정 키 조합과 연타 횟수를 바꾸고 저장할 수 있습니다. 설치할 것은 없고, 윈도우·맥·리눅스 모두 됩니다. 오른쪽 위에서 한국어·English·简体中文·日本語를 고를 수 있고, 처음에는 브라우저 언어를 따릅니다. 펌웨어 1.3.0 이상이 필요합니다.
 
 - 페이지 파일은 `docs/config/index.html`입니다. RP2040과 nice!nano 모두 같은 페이지를 씁니다. 보드가 없어도 "데모 모드"로 화면을 확인할 수 있습니다.
 - 페이지는 `info` 응답을 보고 그 펌웨어가 지원하는 설정만 보여 줍니다. 통신 형식(`proto`)이 다르면 연결을 거부합니다.
@@ -88,6 +88,8 @@ pio run -e reset-rp2040-hw1_1 -t upload      # 또는 reset-nrf52840-hw1_1, rese
 | `set px <100-30000>` | 슬라이더 전체 이동에 해당하는 픽셀 수 (기본 3840) |
 | `set reverse <0\|1>` | 슬라이더 좌우 반전 |
 | `set center <0-32767>` | 센터 보정 조합이 센터로 삼는 슬라이더 위치 (기본 16384 = 가변저항 한가운데) |
+| `set recenter_keys <5\|6>` | 센터 보정 키 조합: 5 = A S D F + Shift 또는 Space, 6 = 버튼 전부 (기본 5) |
+| `set recenter_taps <3-5>` | 센터 보정 연타 횟수, 0.5초 안 (기본 4) |
 | `center` | 지금 슬라이더 위치를 센터로 설정 |
 | `pos` | 지금 슬라이더 위치 (0-32767, 연결 안 됨이면 -1) |
 | `save` | 현재 설정을 플래시에 저장 |
@@ -99,7 +101,7 @@ pio run -e reset-rp2040-hw1_1 -t upload      # 또는 reset-nrf52840-hw1_1, rese
 `info` 응답 예:
 
 ```json
-{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"rp2040-promicro","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse","center"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1],"center":[0,32767]},"defaults":{"brightness":255,"px":3840,"reverse":0,"center":16384},"settings":{"brightness":255,"px":3840,"reverse":0,"center":16384},"dirty":false}
+{"ok":true,"type":"info","name":"infalsus-con","fw":"1.3.0","proto":1,"board":"rp2040-promicro","hw":"1.1","slider":"pot","buttons":6,"caps":["brightness","px","reverse","center","recenter_keys","recenter_taps"],"limits":{"brightness":[0,255],"px":[100,30000],"reverse":[0,1],"center":[0,32767],"recenter_keys":[5,6],"recenter_taps":[3,5]},"defaults":{"brightness":255,"px":3840,"reverse":0,"center":16384,"recenter_keys":5,"recenter_taps":4},"settings":{"brightness":255,"px":3840,"reverse":0,"center":16384,"recenter_keys":5,"recenter_taps":4},"dirty":false}
 ```
 
 `board`는 RP2040이 `rp2040-promicro`, nice!nano가 `nrf52840-nicenano`이고, `hw`는 빌드 환경의 하드웨어 버전입니다. 설정 도구는 `proto`로 명령어 형식 호환을 확인하고, `board`·`hw`·`slider`·`caps`를 보고 이 하드웨어에서 가능한 옵션만 보여 주면 됩니다. 이전 펌웨어에서 저장한 LED 밝기는 처음 부팅할 때 그대로 가져옵니다.
@@ -115,7 +117,8 @@ pio run -e reset-rp2040-hw1_1 -t upload      # 또는 reset-nrf52840-hw1_1, rese
 - `MOUSE_MODE_RELATIVE`: 1 = 상대 이동(기본), 0 = 절대 좌표
 - `MOUSE_REL_PIXELS_PER_TRAVEL`: `px` 설정의 기본값 (3840). 범위는 `PX_PER_TRAVEL_MIN`/`MAX`
 - `SLIDER_CENTER_DEFAULT`: `center` 설정의 기본값 (16384 = 가변저항 전기적 한가운데)
-- `RECENTER_CHORD_MASK`, `RECENTER_CHORD_ANY_MASK`, `RECENTER_TAPS`, `RECENTER_WINDOW_MS`: 센터 보정 제스처 (ASDF + Shift/Space / 4번 / 500ms)
+- `RECENTER_5_MASK`, `RECENTER_5_ANY_MASK`, `RECENTER_6_MASK`: 5키·6키 센터 보정 조합
+- `RECENTER_KEYS_DEFAULT`, `RECENTER_TAPS_DEFAULT`, `RECENTER_TAPS_MIN`/`MAX`, `RECENTER_WINDOW_MS`: 센터 보정 설정의 기본값(5키, 4번)·범위(3~5번)와 연타 시간(500ms)
 - `SLIDER_ADC_MAX`: 슬라이더 끝에서 읽히는 ADC 최대값 (4060)
 - `SLIDER_OVERSAMPLE`, `SLIDER_SMOOTHING_MIN/MAX`, `SLIDER_SPEED_GAIN`: 적응형 노이즈 필터
 - `SLIDER_MIN_STEP`: 움직이는 중 이만큼 변해야 전송 (16)

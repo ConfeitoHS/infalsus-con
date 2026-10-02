@@ -84,6 +84,10 @@ pre.log {
 .mk-pos { background: var(--warn); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.choice { display: inline-flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.choice button { border: 0; border-radius: 0; border-right: 1px solid var(--line); padding: 7px 14px; }
+.choice button:last-child { border-right: 0; }
+.choice button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .hidden { display: none !important; }
 footer { color: var(--muted); font-size: 13px; margin-top: 20px; }
 code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
@@ -178,7 +182,13 @@ const STR = {
     reverse_label: "슬라이더 방향 반전",
     reverse_help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
     center_label: "슬라이더 센터 위치",
-    center_help: "센터 보정 조합(A S D F + Shift 또는 Space를 4번)이 기준으로 삼는 슬라이더 위치입니다. 슬라이더를 하우징 한가운데에 두고 아래 버튼을 누르거나, 막대로 미세 조정하세요.",
+    center_help: "센터 보정 조합이 기준으로 삼는 슬라이더 위치입니다. 슬라이더를 하우징 한가운데에 두고 아래 버튼을 누르거나, 막대로 미세 조정하세요.",
+    recenter_keys_label: "센터 보정 키 조합",
+    recenter_keys_help: "게임이 커서를 가운데로 옮긴 직후 이 키들을 동시에 연타하면, 슬라이더가 센터에서 벗어난 만큼 커서를 옮겨 맞춥니다.",
+    recenter_keys_5: "5키 (A S D F + Shift 또는 Space)", recenter_keys_6: "6키 (버튼 전부)",
+    recenter_taps_label: "센터 보정 연타 횟수",
+    recenter_taps_help: "0.5초 안에 키 조합을 몇 번 눌러야 센터 보정이 되는지 정합니다. 게임 중 실수로 눌리면 횟수를 늘리세요.",
+    taps_n: "{n}번",
     center_capture: "지금 슬라이더 위치를 센터로", center_now: "현재 위치", center_set: "센터", center_unknown: "슬라이더 연결 안 됨",
     reverse_toggle: "반전", on: "켜짐", off: "꺼짐",
     dirty: "저장 안 된 변경 있음", saved: "컨트롤러에 저장됨",
@@ -213,7 +223,13 @@ const STR = {
     reverse_label: "Reverse slider direction",
     reverse_help: "Turn this on if the cursor moves left when you push the slider right.",
     center_label: "Slider centre position",
-    center_help: "The slider position the re-centre chord (A S D F + Shift or Space, tapped 4 times) treats as the centre. Put the slider in the middle of the housing and press the button below, or fine-tune it with the bar.",
+    center_help: "The slider position the re-centre chord treats as the centre. Put the slider in the middle of the housing and press the button below, or fine-tune it with the bar.",
+    recenter_keys_label: "Re-centre chord",
+    recenter_keys_help: "Right after the game moves the cursor to the centre, tap these keys together and the cursor shifts by the slider's distance from centre so the two line up.",
+    recenter_keys_5: "5 keys (A S D F + Shift or Space)", recenter_keys_6: "6 keys (all buttons)",
+    recenter_taps_label: "Re-centre taps",
+    recenter_taps_help: "How many times the chord must be tapped within 0.5 s. Raise it if it triggers by accident during play.",
+    taps_n: "{n} taps",
     center_capture: "Use the current slider position", center_now: "Current position", center_set: "Centre", center_unknown: "Slider not connected",
     reverse_toggle: "Reverse", on: "On", off: "Off",
     dirty: "Unsaved changes", saved: "Saved on the controller",
@@ -248,7 +264,13 @@ const STR = {
     reverse_label: "反转滑条方向",
     reverse_help: "如果向右推滑条时光标向左移动，请打开此项。",
     center_label: "滑条中心位置",
-    center_help: "居中组合键（A S D F + Shift 或 Space，连按 4 次）所使用的滑条中心位置。把滑条放在外壳正中间后按下方按钮，或用滑块微调。",
+    center_help: "居中组合键所使用的滑条中心位置。把滑条放在外壳正中间后按下方按钮，或用滑块微调。",
+    recenter_keys_label: "居中组合键",
+    recenter_keys_help: "游戏把光标移到中间后，同时连按这些键，光标会按滑条偏离中心的距离移动，使两者对齐。",
+    recenter_keys_5: "5 键（A S D F + Shift 或 Space）", recenter_keys_6: "6 键（全部按键）",
+    recenter_taps_label: "居中连按次数",
+    recenter_taps_help: "需要在 0.5 秒内连按组合键的次数。如果游戏中容易误触，请增加次数。",
+    taps_n: "{n} 次",
     center_capture: "将当前滑条位置设为中心", center_now: "当前位置", center_set: "中心", center_unknown: "滑条未连接",
     reverse_toggle: "反转", on: "开", off: "关",
     dirty: "有未保存的更改", saved: "已保存到控制器",
@@ -283,7 +305,13 @@ const STR = {
     reverse_label: "スライダーの向きを反転",
     reverse_help: "スライダーを右に動かしたときにカーソルが左に動く場合はオンにしてください。",
     center_label: "スライダーの中心位置",
-    center_help: "センター補正（A S D F + Shift または Space を 4 回）が基準にするスライダー位置です。スライダーをケースの真ん中に置いて下のボタンを押すか、バーで微調整してください。",
+    center_help: "センター補正が基準にするスライダー位置です。スライダーをケースの真ん中に置いて下のボタンを押すか、バーで微調整してください。",
+    recenter_keys_label: "センター補正のキー",
+    recenter_keys_help: "ゲームがカーソルを中央に移した直後にこれらのキーを同時に連打すると、スライダーが中心からずれた分だけカーソルを動かして合わせます。",
+    recenter_keys_5: "5 キー（A S D F + Shift または Space）", recenter_keys_6: "6 キー（全ボタン）",
+    recenter_taps_label: "センター補正の連打回数",
+    recenter_taps_help: "0.5 秒以内にキーの組み合わせを何回押すとセンター補正になるかを決めます。プレイ中に誤って発動する場合は回数を増やしてください。",
+    taps_n: "{n} 回",
     center_capture: "現在のスライダー位置を中心にする", center_now: "現在位置", center_set: "中心", center_unknown: "スライダー未接続",
     reverse_toggle: "反転", on: "オン", off: "オフ",
     dirty: "未保存の変更あり", saved: "コントローラーに保存済み",
@@ -342,6 +370,8 @@ const CONTROLS = {
   px: { kind: "number", step: 10, presets: [1920, 2880, 3840, 5760, 7680], format: v => `${v} px` },
   reverse: { kind: "toggle", format: v => t(v ? "on" : "off") },
   center: { kind: "center", step: 1, format: v => fmtPct(v) },
+  recenter_keys: { kind: "choice", options: [5, 6], optLabel: v => t("recenter_keys_" + v), format: () => "" },
+  recenter_taps: { kind: "choice", optLabel: v => t("taps_n", { n: v }), format: () => "" },
 };
 
 // 0-32767 slider units as % of travel, with the offset from the middle
@@ -406,8 +436,8 @@ class SerialTransport {
 class DemoTransport {
   constructor() {
     this.onLine = () => {}; this.onClose = () => {};
-    this.defaults = { brightness: 255, px: 3840, reverse: 0, center: 16384 };
-    this.saved = { brightness: 180, px: 3840, reverse: 0, center: 16384 };
+    this.defaults = { brightness: 255, px: 3840, reverse: 0, center: 16384, recenter_keys: 5, recenter_taps: 4 };
+    this.saved = { ...this.defaults, brightness: 180 };
     this.t0 = Date.now();
     this.cfg = { ...this.saved };
   }
@@ -423,8 +453,8 @@ class DemoTransport {
     if (cmd === "info") return this.emit({
       ok: true, type: "info", name: "infalsus-con", fw: "1.3.0", proto: 1,
       board: "rp2040-promicro", hw: "1.1", slider: "pot", buttons: 6,
-      caps: ["brightness", "px", "reverse", "center"],
-      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767] },
+      caps: ["brightness", "px", "reverse", "center", "recenter_keys", "recenter_taps"],
+      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5] },
       defaults: { ...this.defaults }, settings: { ...this.cfg }, dirty: this.dirty(),
     });
     if (cmd === "get") return this.emit(this.settings("settings"));
@@ -435,9 +465,10 @@ class DemoTransport {
     if (cmd === "defaults") { this.cfg = { ...this.defaults }; return this.emit(this.settings("settings")); }
     if (cmd === "set") {
       const v = Number(val);
-      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767] }[key];
+      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5] }[key];
       if (!lim) return this.emit({ ok: false, error: "unknown setting" });
       if (!Number.isInteger(v) || v < lim[0] || v > lim[1]) return this.emit({ ok: false, error: key + " out of range" });
+      if (key === "recenter_keys" && v !== 5 && v !== 6) return this.emit({ ok: false, error: "recenter_keys must be 5 or 6" });
       this.cfg[key] = v;
       return this.emit(this.settings("settings"));
     }
@@ -648,6 +679,18 @@ function renderSettings() {
       b.style.marginTop = "10px";
       b.addEventListener("click", () => command("center"));
       wrap.append(bar, leg, r, b);
+    } else if (def.kind === "choice") {
+      const opts = def.options || Array.from({ length: max - min + 1 }, (_, i) => min + i);
+      const grp = el("div", { className: "choice", id: "ctl-" + key });
+      grp.setAttribute("role", "radiogroup");
+      for (const v of opts) {
+        const b = el("button", { type: "button", textContent: def.optLabel(v) });
+        b.dataset.v = v;
+        b.setAttribute("role", "radio");
+        b.addEventListener("click", () => { markChoice(key, v); sendSet(key, v); });
+        grp.append(b);
+      }
+      wrap.append(grp);
     } else if (def.kind === "toggle") {
       const lab = el("label", { className: "switch" });
       const c = el("input", { type: "checkbox", id: "ctl-" + key });
@@ -680,6 +723,7 @@ function applySettings(settings, dirty) {
     if (dragging === key) continue;   // do not fight the user's drag
     const c = $("ctl-" + key), n = $("num-" + key);
     if (c && c.type === "checkbox") c.checked = !!v;
+    else if (c && c.classList.contains("choice")) markChoice(key, v);
     else if (c) c.value = v;
     if (n && document.activeElement !== n) n.value = v;
     if (key === "center") setMarker("mk-center", v);
@@ -708,6 +752,16 @@ function sendSet(key, v) { command(`set ${key} ${v}`, "set:" + key); }
 function el(tag, props) { const e = document.createElement(tag); Object.assign(e, props); return e; }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+
+function markChoice(key, v) {
+  const g = $("ctl-" + key);
+  if (!g) return;
+  for (const b of g.children) {
+    const on = +b.dataset.v === +v;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", on ? "true" : "false");
+  }
+}
 
 function setMarker(id, v) {
   const m = $(id);
