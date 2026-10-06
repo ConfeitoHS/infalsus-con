@@ -183,6 +183,9 @@ const STR = {
     reverse_help: "슬라이더를 오른쪽으로 밀었을 때 커서가 왼쪽으로 가면 켜세요.",
     center_label: "슬라이더 센터 위치",
     center_help: "센터 보정 조합이 기준으로 삼는 슬라이더 위치입니다. 슬라이더를 하우징 한가운데에 두고 아래 버튼을 누르거나, 막대로 미세 조정하세요.",
+    wake_label: "정지 후 반응 거리",
+    wake_help: "멈춰 있던 슬라이더를 이만큼 움직여야 커서가 움직이기 시작합니다. 작을수록 출발이 가볍고, 너무 작으면 손을 떼도 커서가 떨릴 수 있습니다. 기본 64.",
+    wake_px: "약 {px} px",
     recenter_keys_label: "센터 보정 키 조합",
     recenter_keys_help: "게임이 커서를 가운데로 옮긴 직후 이 키들을 동시에 연타하면, 슬라이더가 센터에서 벗어난 만큼 커서를 옮겨 맞춥니다.",
     recenter_keys_5: "5키 (A S D F + Shift 또는 Space)", recenter_keys_6: "6키 (버튼 전부)",
@@ -224,6 +227,9 @@ const STR = {
     reverse_help: "Turn this on if the cursor moves left when you push the slider right.",
     center_label: "Slider centre position",
     center_help: "The slider position the re-centre chord treats as the centre. Put the slider in the middle of the housing and press the button below, or fine-tune it with the bar.",
+    wake_label: "Wake-up distance",
+    wake_help: "How far a resting slider must move before the cursor starts to follow. Smaller feels lighter to start; too small and the cursor may jitter when you let go. Default 64.",
+    wake_px: "≈ {px} px",
     recenter_keys_label: "Re-centre chord",
     recenter_keys_help: "Right after the game moves the cursor to the centre, tap these keys together and the cursor shifts by the slider's distance from centre so the two line up.",
     recenter_keys_5: "5 keys (A S D F + Shift or Space)", recenter_keys_6: "6 keys (all buttons)",
@@ -265,6 +271,9 @@ const STR = {
     reverse_help: "如果向右推滑条时光标向左移动，请打开此项。",
     center_label: "滑条中心位置",
     center_help: "居中组合键所使用的滑条中心位置。把滑条放在外壳正中间后按下方按钮，或用滑块微调。",
+    wake_label: "静止后的启动距离",
+    wake_help: "静止的滑条需要移动这么多，光标才开始跟随。数值越小起步越轻；太小的话松手后光标可能抖动。默认 64。",
+    wake_px: "约 {px} px",
     recenter_keys_label: "居中组合键",
     recenter_keys_help: "游戏把光标移到中间后，同时连按这些键，光标会按滑条偏离中心的距离移动，使两者对齐。",
     recenter_keys_5: "5 键（A S D F + Shift 或 Space）", recenter_keys_6: "6 键（全部按键）",
@@ -306,6 +315,9 @@ const STR = {
     reverse_help: "スライダーを右に動かしたときにカーソルが左に動く場合はオンにしてください。",
     center_label: "スライダーの中心位置",
     center_help: "センター補正が基準にするスライダー位置です。スライダーをケースの真ん中に置いて下のボタンを押すか、バーで微調整してください。",
+    wake_label: "静止後の反応距離",
+    wake_help: "止まっているスライダーをこれだけ動かすとカーソルが動き始めます。小さいほど動き出しが軽く、小さすぎると手を離してもカーソルが揺れることがあります。初期値 64。",
+    wake_px: "約 {px} px",
     recenter_keys_label: "センター補正のキー",
     recenter_keys_help: "ゲームがカーソルを中央に移した直後にこれらのキーを同時に連打すると、スライダーが中心からずれた分だけカーソルを動かして合わせます。",
     recenter_keys_5: "5 キー（A S D F + Shift または Space）", recenter_keys_6: "6 キー（全ボタン）",
@@ -370,6 +382,8 @@ const CONTROLS = {
   px: { kind: "number", step: 10, presets: [1920, 2880, 3840, 5760, 7680], format: v => `${v} px` },
   reverse: { kind: "toggle", format: v => t(v ? "on" : "off") },
   center: { kind: "center", step: 1, format: v => fmtPct(v) },
+  wake: { kind: "number", step: 1, presets: [16, 24, 32, 48, 64, 96, 128],
+          format: v => `${v} (${t("wake_px", { px: (v * (current.px || 3840) / 32767).toFixed(1) })})` },
   recenter_keys: { kind: "choice", options: [5, 6], optLabel: v => t("recenter_keys_" + v), format: () => "" },
   recenter_taps: { kind: "choice", optLabel: v => t("taps_n", { n: v }), format: () => "" },
 };
@@ -436,7 +450,7 @@ class SerialTransport {
 class DemoTransport {
   constructor() {
     this.onLine = () => {}; this.onClose = () => {};
-    this.defaults = { brightness: 255, px: 3840, reverse: 0, center: 16384, recenter_keys: 5, recenter_taps: 4 };
+    this.defaults = { brightness: 255, px: 3840, reverse: 0, center: 16384, recenter_keys: 5, recenter_taps: 4, wake: 64 };
     this.saved = { ...this.defaults, brightness: 180 };
     this.t0 = Date.now();
     this.cfg = { ...this.saved };
@@ -453,8 +467,8 @@ class DemoTransport {
     if (cmd === "info") return this.emit({
       ok: true, type: "info", name: "infalsus-con", fw: "1.3.0", proto: 1,
       board: "rp2040-promicro", hw: "1.1", slider: "pot", buttons: 6,
-      caps: ["brightness", "px", "reverse", "center", "recenter_keys", "recenter_taps"],
-      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5] },
+      caps: ["brightness", "px", "wake", "reverse", "center", "recenter_keys", "recenter_taps"],
+      limits: { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5], wake: [16, 512] },
       defaults: { ...this.defaults }, settings: { ...this.cfg }, dirty: this.dirty(),
     });
     if (cmd === "get") return this.emit(this.settings("settings"));
@@ -465,7 +479,7 @@ class DemoTransport {
     if (cmd === "defaults") { this.cfg = { ...this.defaults }; return this.emit(this.settings("settings")); }
     if (cmd === "set") {
       const v = Number(val);
-      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5] }[key];
+      const lim = { brightness: [0, 255], px: [100, 30000], reverse: [0, 1], center: [0, 32767], recenter_keys: [5, 6], recenter_taps: [3, 5], wake: [16, 512] }[key];
       if (!lim) return this.emit({ ok: false, error: "unknown setting" });
       if (!Number.isInteger(v) || v < lim[0] || v > lim[1]) return this.emit({ ok: false, error: key + " out of range" });
       if (key === "recenter_keys" && v !== 5 && v !== 6) return this.emit({ ok: false, error: "recenter_keys must be 5 or 6" });
@@ -728,6 +742,7 @@ function applySettings(settings, dirty) {
     if (n && document.activeElement !== n) n.value = v;
     if (key === "center") setMarker("mk-center", v);
   }
+  if (settings.wake !== undefined && info.caps.includes("wake")) showValue("wake", settings.wake);
   const st = $("save-state");
   lastDirty = !!dirty;
   renderSaveState();

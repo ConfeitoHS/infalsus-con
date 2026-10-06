@@ -3,15 +3,16 @@
 #include "config.h"
 
 // ---- Platform layer: settings storage in internal flash ---------------
+// settings_read() returns how many bytes it read (0 if the file is missing)
 #if defined(ARDUINO_ARCH_RP2040)
   #include <LittleFS.h>
   static void settings_begin() { LittleFS.begin(); }
-  static bool settings_read(const char* path, void* buf, size_t len) {
+  static size_t settings_read(const char* path, void* buf, size_t maxlen) {
       File f = LittleFS.open(path, "r");
-      if (!f) return false;
-      bool ok = f.read((uint8_t*)buf, len) == (int)len;
+      if (!f) return 0;
+      int n = f.read((uint8_t*)buf, maxlen);
       f.close();
-      return ok;
+      return n > 0 ? (size_t)n : 0;
   }
   static void settings_write(const char* path, const void* buf, size_t len) {
       File f = LittleFS.open(path, "w");
@@ -24,12 +25,12 @@
   #include <InternalFileSystem.h>
   using namespace Adafruit_LittleFS_Namespace;
   static void settings_begin() { InternalFS.begin(); }
-  static bool settings_read(const char* path, void* buf, size_t len) {
+  static size_t settings_read(const char* path, void* buf, size_t maxlen) {
       File f(InternalFS);
-      if (!f.open(path, FILE_O_READ)) return false;
-      bool ok = f.read(buf, len) == (int)len;
+      if (!f.open(path, FILE_O_READ)) return 0;
+      int n = f.read(buf, maxlen);
       f.close();
-      return ok;
+      return n > 0 ? (size_t)n : 0;
   }
   static void settings_write(const char* path, const void* buf, size_t len) {
       InternalFS.remove(path);   // FILE_O_WRITE appends, so start fresh
@@ -41,32 +42,27 @@
 #endif
 
 // ---- User settings (persisted as one record) ----------------------------
-// Adding a field: append it, bump SETTINGS_VERSION and give it a default in
-// settings_defaults(); an older record is then ignored and defaults apply.
+// Fields are only ever appended, so a record written by an older firmware is
+// a prefix of this layout: it is read as far as it goes and every field it
+// lacks keeps its default. Adding a field: append it, bump SETTINGS_VERSION,
+// add the new record size to RECORD_SIZE, give it a default and a check.
 #define SETTINGS_MAGIC    0x49   // 'I'
-#define SETTINGS_VERSION  3
+#define SETTINGS_VERSION  4
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
     uint8_t  version;
-    uint8_t  brightness;     // LED PWM level 0-255
-    uint8_t  reverse;        // 1 = flip the built-in slider direction
-    uint16_t px_per_travel;  // pixels for the full slider travel
+    uint8_t  brightness;     // LED PWM level 0-255                         (v1)
+    uint8_t  reverse;        // 1 = flip the built-in slider direction       (v1)
+    uint16_t px_per_travel;  // pixels for the full slider travel            (v1)
     uint16_t center;         // slider position (0-32767, before the direction
-                             // flip) that the re-centre chord treats as centre
-    uint8_t  recenter_keys;  // re-centre chord: 5 = ASDF + Shift/Space, 6 = all
-    uint8_t  recenter_taps;  // re-centre chord taps (3-5)
+                             // flip) that the re-centre chord treats as centre (v2)
+    uint8_t  recenter_keys;  // re-centre chord: 5 = ASDF + Shift/Space, 6 = all (v3)
+    uint8_t  recenter_taps;  // re-centre chord taps (3-5)                   (v3)
+    uint16_t wake_step;      // move (0-32767 units) that wakes a resting slider (v4)
 } settings_t;
 
-// Earlier records from pre-release 1.3.0 builds (version 1: no center,
-// version 2: no re-centre chord choice); their values are kept on upgrade
-typedef struct __attribute__((packed)) {
-    uint8_t  magic, version, brightness, reverse;
-    uint16_t px_per_travel;
-} settings_v1_t;
-typedef struct __attribute__((packed)) {
-    uint8_t  magic, version, brightness, reverse;
-    uint16_t px_per_travel, center;
-} settings_v2_t;
+// Record size written by each settings version (index = version)
+static const uint8_t RECORD_SIZE[SETTINGS_VERSION + 1] = { 0, 6, 8, 10, 12 };
 
 static const char* SETTINGS_FILE   = "/settings";
 static const char* LEGACY_BRIGHTNESS_FILE = "/led_brightness";  // firmware 1.2 and older
@@ -83,41 +79,37 @@ static void settings_defaults(settings_t& s) {
     s.center        = SLIDER_CENTER_DEFAULT;
     s.recenter_keys = RECENTER_KEYS_DEFAULT;
     s.recenter_taps = RECENTER_TAPS_DEFAULT;
+    s.wake_step     = SLIDER_WAKE_STEP;
 }
 
-static bool settings_valid(const settings_t& s) {
-    return s.magic == SETTINGS_MAGIC && s.version == SETTINGS_VERSION &&
-           s.reverse <= 1 &&
-           s.px_per_travel >= PX_PER_TRAVEL_MIN && s.px_per_travel <= PX_PER_TRAVEL_MAX &&
-           s.center <= 32767 &&
-           (s.recenter_keys == 5 || s.recenter_keys == 6) &&
-           s.recenter_taps >= RECENTER_TAPS_MIN && s.recenter_taps <= RECENTER_TAPS_MAX;
+// Replace any out-of-range field with its default
+static void settings_sanitize(settings_t& s) {
+    settings_t d;
+    settings_defaults(d);
+    s.magic = SETTINGS_MAGIC;
+    s.version = SETTINGS_VERSION;
+    if (s.reverse > 1) s.reverse = d.reverse;
+    if (s.px_per_travel < PX_PER_TRAVEL_MIN || s.px_per_travel > PX_PER_TRAVEL_MAX) s.px_per_travel = d.px_per_travel;
+    if (s.center > 32767) s.center = d.center;
+    if (s.recenter_keys != 5 && s.recenter_keys != 6) s.recenter_keys = d.recenter_keys;
+    if (s.recenter_taps < RECENTER_TAPS_MIN || s.recenter_taps > RECENTER_TAPS_MAX) s.recenter_taps = d.recenter_taps;
+    if (s.wake_step < WAKE_STEP_MIN || s.wake_step > WAKE_STEP_MAX) s.wake_step = d.wake_step;
 }
 
 static void load_settings() {
     settings_t s;
-    if (!settings_read(SETTINGS_FILE, &s, sizeof(s)) || !settings_valid(s)) {
-        settings_defaults(s);
-        settings_v2_t v2;
-        settings_v1_t v1;
+    settings_defaults(s);
+    settings_t rec;
+    size_t n = settings_read(SETTINGS_FILE, &rec, sizeof(rec));
+    if (n >= 2 && rec.magic == SETTINGS_MAGIC &&
+        rec.version >= 1 && rec.version <= SETTINGS_VERSION &&
+        n == RECORD_SIZE[rec.version]) {
+        memcpy(&s, &rec, n);               // fields the old record has
+    } else {
         uint8_t b;
-        if (settings_read(SETTINGS_FILE, &v2, sizeof(v2)) &&
-            v2.magic == SETTINGS_MAGIC && v2.version == 2) {
-            s.brightness    = v2.brightness;       // keep the older record's values
-            s.reverse       = v2.reverse <= 1 ? v2.reverse : 0;
-            if (v2.px_per_travel >= PX_PER_TRAVEL_MIN && v2.px_per_travel <= PX_PER_TRAVEL_MAX)
-                s.px_per_travel = v2.px_per_travel;
-            if (v2.center <= 32767) s.center = v2.center;
-        } else if (settings_read(SETTINGS_FILE, &v1, sizeof(v1)) &&
-            v1.magic == SETTINGS_MAGIC && v1.version == 1) {
-            s.brightness    = v1.brightness;
-            s.reverse       = v1.reverse <= 1 ? v1.reverse : 0;
-            if (v1.px_per_travel >= PX_PER_TRAVEL_MIN && v1.px_per_travel <= PX_PER_TRAVEL_MAX)
-                s.px_per_travel = v1.px_per_travel;
-        } else if (settings_read(LEGACY_BRIGHTNESS_FILE, &b, 1)) {
-            s.brightness = b;                      // firmware 1.2 and older
-        }
+        if (settings_read(LEGACY_BRIGHTNESS_FILE, &b, 1) == 1) s.brightness = b;
     }
+    settings_sanitize(s);
     cfg = cfg_saved = s;
 }
 
@@ -463,7 +455,7 @@ static void handle_slider() {
                                              : slider_last_x - abs_x;
     uint32_t now = millis();
     if (slider_resting) {
-        if (delta < SLIDER_WAKE_STEP) return;
+        if (delta < cfg.wake_step) return;
         slider_resting = false;
     } else if (delta < SLIDER_MIN_STEP) {
         if (now - slider_last_move >= SLIDER_REST_MS) slider_resting = true;
@@ -561,6 +553,7 @@ static void brightness_mode() {
 //   set px <min-max>         pixels for the full slider travel
 //   set reverse <0|1>        flip the slider direction
 //   set center <0-32767>     slider position used as centre by the re-centre chord
+//   set wake <16-512>        move (0-32767 units) needed to wake a resting slider
 //   set recenter_keys <5|6>  re-centre chord: 5 = A S D F + Shift/Space, 6 = all buttons
 //   set recenter_taps <3-5>  how many times the chord is tapped (within 0.5 s)
 //   center                   take the current slider position as centre
@@ -578,6 +571,7 @@ static void print_settings_json(const settings_t& s) {
     Serial.print(",\"center\":");      Serial.print(s.center);
     Serial.print(",\"recenter_keys\":"); Serial.print(s.recenter_keys);
     Serial.print(",\"recenter_taps\":"); Serial.print(s.recenter_taps);
+    Serial.print(",\"wake\":");        Serial.print(s.wake_step);
     Serial.print("}");
 }
 
@@ -608,11 +602,13 @@ static void reply_info() {
     Serial.print(",\"hw\":\"" HW_REV "\"");
     Serial.print(",\"slider\":\"" SLIDER_TYPE "\"");
     Serial.print(",\"buttons\":"); Serial.print(NUM_BUTTONS);
-    Serial.print(",\"caps\":[\"brightness\",\"px\",\"reverse\",\"center\",\"recenter_keys\",\"recenter_taps\"]");
+    Serial.print(",\"caps\":[\"brightness\",\"px\",\"wake\",\"reverse\",\"center\",\"recenter_keys\",\"recenter_taps\"]");
     Serial.print(",\"limits\":{\"brightness\":[0,255],\"px\":[");
     Serial.print(PX_PER_TRAVEL_MIN); Serial.print(","); Serial.print(PX_PER_TRAVEL_MAX);
     Serial.print("],\"reverse\":[0,1],\"center\":[0,32767],\"recenter_keys\":[5,6],\"recenter_taps\":[");
     Serial.print(RECENTER_TAPS_MIN); Serial.print(","); Serial.print(RECENTER_TAPS_MAX);
+    Serial.print("],\"wake\":[");
+    Serial.print(WAKE_STEP_MIN); Serial.print(","); Serial.print(WAKE_STEP_MAX);
     Serial.print("]}");
     Serial.print(",\"defaults\":"); print_settings_json(d);
     Serial.print(",\"settings\":"); print_settings_json(cfg);
@@ -685,6 +681,9 @@ static void run_command(char* line) {
         } else if (!strcmp(key, "px")) {
             if (v < PX_PER_TRAVEL_MIN || v > PX_PER_TRAVEL_MAX) { reply_error("px out of range"); return; }
             cfg.px_per_travel = (uint16_t)v;
+        } else if (!strcmp(key, "wake")) {
+            if (v < WAKE_STEP_MIN || v > WAKE_STEP_MAX) { reply_error("wake out of range"); return; }
+            cfg.wake_step = (uint16_t)v;
         } else if (!strcmp(key, "recenter_keys")) {
             if (v != 5 && v != 6) { reply_error("recenter_keys must be 5 or 6"); return; }
             cfg.recenter_keys = (uint8_t)v;

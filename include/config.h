@@ -269,7 +269,9 @@ static const uint8_t BUTTON_KEYS[NUM_BUTTONS] = {
 // After SLIDER_REST_MS without a change ≥ SLIDER_MIN_STEP the slider is
 // considered at rest and nothing is sent until it moves ≥ SLIDER_WAKE_STEP
 // (64 ≈ 4px) — this is what stops the cursor twitching when untouched.
-#define SLIDER_WAKE_STEP    64
+#define SLIDER_WAKE_STEP    64      // default of the "wake" setting
+#define WAKE_STEP_MIN       16      // = SLIDER_MIN_STEP
+#define WAKE_STEP_MAX       512
 #define SLIDER_REST_MS      150
 
 // Input scan period and USB HID polling interval (ms). 1 = 1000Hz,
