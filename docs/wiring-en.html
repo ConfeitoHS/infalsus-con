@@ -335,7 +335,7 @@
   <figure>
     <h2>Detachable slider unit — 3.5mm 4-pole (TRRS) jack</h2>
     <div class="canvas main">
-      <svg viewBox="0 0 1000 330" role="img" aria-label="Main unit and slider unit joined by 3.5mm 4-pole jacks and a cable. Tip carries the wiper to 029, first ring is 3.3V, sleeve is GND. On the main unit the second ring goes to 031 for cable detect; on the slider unit the second ring is tied to the sleeve. 100nF sits on the main unit between 029 and GND.">
+      <svg viewBox="0 0 1000 330" role="img" aria-label="Main unit and slider unit joined by 3.5mm 4-pole jacks and a cable. Tip carries the wiper to GP28, first ring is 3.3V, sleeve is GND. On the main unit the second ring goes to GP29 for cable detect; on the slider unit the second ring is tied to the sleeve. 100nF sits on the main unit between GP28 and GND.">
         <defs>
           <marker id="arr-in3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
             <polygon points="0,0 10,5 0,10" class="arr-in"/>
@@ -348,11 +348,11 @@
 
         <text x="34" y="94" class="valv">3.3V (VCC)</text>
         <line x1="34" y1="100" x2="284" y2="100" class="w-vcc"/>
-        <text x="34" y="126" class="lbl"><tspan class="b">029</tspan> (A1) wiper</text>
+        <text x="34" y="126" class="lbl"><tspan class="b">GP28</tspan> (A2) wiper</text>
         <line x1="34" y1="132" x2="284" y2="132" class="w-in"/>
         <text x="34" y="158" class="lbl"><tspan class="b">GND</tspan></text>
         <line x1="34" y1="164" x2="284" y2="164" class="w-gnd"/>
-        <text x="34" y="190" class="lbl"><tspan class="b">031</tspan> cable detect</text>
+        <text x="34" y="190" class="lbl"><tspan class="b">GP29</tspan> (A3) cable detect</text>
         <line x1="34" y1="196" x2="284" y2="196" class="w-in"/>
 
         <!-- 100nF wiper→GND on the main unit -->
@@ -393,7 +393,7 @@
         <text x="640" y="134" class="pin" text-anchor="middle">R</text>
         <text x="657" y="134" class="pin" text-anchor="middle">T</text>
         <text x="500" y="182" class="lbl" text-anchor="middle">3.5mm cable — <tspan class="b">3-pole (TRS)</tspan> or <tspan class="b">4-pole (TRRS)</tspan> both work</text>
-        <text x="500" y="204" class="val" text-anchor="middle">T=wiper→029 · R1=3.3V · S=GND · R2=detect (031)</text>
+        <text x="500" y="204" class="val" text-anchor="middle">T=wiper→GP28 · R1=3.3V · S=GND · R2=detect (GP29)</text>
         <text x="500" y="222" class="val" text-anchor="middle">the plug sleeve bridges R2 and S, which is what gets detected</text>
 
         <!-- ===== Right panel: slider unit ===== -->
@@ -427,7 +427,7 @@
         <text x="500" y="300" class="hd" text-anchor="middle">Plug the cable in before USB — inserting or removing it under power can momentarily short 3.3V to GND</text>
       </svg>
     </div>
-    <figcaption>Main-unit jack: T→029, R1→3.3V, S→GND, R2→031 (detect). Slider-unit jack: T→wiper, R1·S→the two ends, R2 tied to S. When a cable is inserted, 031 on the main unit drops to GND and the firmware registers the connection (LEDs flash once); on removal it stops sending mouse reports (LEDs flash twice). The 100nF lives on the main unit so it also filters noise picked up by the cable. The slider ends can be swapped; if the direction is backwards, flip <code>MOUSE_INVERT_X</code>.</figcaption>
+    <figcaption>Main-unit jack: T→GP28, R1→3.3V, S→GND, R2→GP29 (detect). Slider-unit jack: T→wiper, R1·S→the two ends, R2 tied to S. When a cable is inserted, GP29 on the main unit drops to GND and the firmware registers the connection (LEDs flash once); on removal it stops sending mouse reports (LEDs flash twice). The 100nF lives on the main unit so it also filters noise picked up by the cable. The slider ends can be swapped; if the direction is backwards, flip <code>MOUSE_INVERT_X</code>.</figcaption>
   </figure>
 
   <section>
@@ -482,7 +482,6 @@
           <tr><td>100nF (104) ceramic</td><td class="num">1</td><td>Slider signal filter</td><td class="buy">search: <span class="mono">104 ceramic capacitor</span></td></tr>
           <tr><td>10µF / 16V electrolytic</td><td class="num">1</td><td>3.3V rail decoupling</td><td class="buy">search: <span class="mono">10uF 16V electrolytic</span></td></tr>
           <tr><td>3.5mm cable, male–male</td><td class="num">1</td><td>Main unit ↔ slider unit. 3-pole (TRS) or 4-pole (TRRS). <b>1m recommended</b></td><td class="buy">search: <span class="mono">3.5mm aux cable 1m</span></td></tr>
-          <tr><td>USB-C panel-mount extension cable</td><td class="num">1</td><td>Brings the board's USB-C port out to the case wall. Male (board side) → female (panel side, screw flange). 20–30cm, USB 2.0 is enough</td><td class="buy">search: <span class="mono">USB C panel mount extension cable</span></td></tr>
           <tr><td>3.5mm 4-pole (TRRS) panel-mount extension cable</td><td class="num">2</td><td>1 main unit · 1 slider unit. PJ-320A breakout → case wall. <b>Must be 4-pole (TRRS)</b> — a 3-pole one drops R2 (cable detect). 20–30cm</td><td class="buy">search: <span class="mono">3.5mm TRRS panel mount extension</span></td></tr>
           <tr><td>Pin header 2.54mm 1×12</td><td class="num">2</td><td>Mounts the board above the perfboard. Often included with the board</td><td class="buy">search: <span class="mono">pin header 2.54mm 40pin</span></td></tr>
           <tr><td>M2 × 5mm screw</td><td class="num">8</td><td>Perfboard mounting</td><td class="buy">search: <span class="mono">M2 5mm screw</span></td></tr>
@@ -504,7 +503,7 @@
       </div>
       <div class="note">
         <h3>The two capacitors</h3>
-        <p><b>100nF</b> between the slider wiper (029) and GND, <b>close to the board</b>, so it also filters noise picked up by the wiring. No polarity.</p>
+        <p><b>100nF</b> between the slider wiper (GP28) and GND, <b>close to the board</b>, so it also filters noise picked up by the wiring. No polarity.</p>
         <p><b>10µF</b> between VCC and GND on the board that carries the LEDs and slider. It absorbs the 3.3V dip when LEDs switch on. For an electrolytic, long leg (+) to VCC, white stripe to GND.</p>
       </div>
       <div class="note">
@@ -514,7 +513,7 @@
       </div>
       <div class="note">
         <h3>RST switch</h3>
-        <p>One small tactile switch between RST and GND. A single press reboots; a <b>quick double-tap</b> enters bootloader mode (a <span class="mono">NICENANO</span> drive appears) so you can flash firmware. Place it where it can be reached from outside the case.</p>
+        <p>One small tactile switch between RST and GND. A single press reboots. <b>Hold the board's BOOT button</b> and press RST to enter bootloader mode (an <span class="mono">RPI-RP2</span> drive appears) so you can flash firmware. Place it where it can be reached from outside the case.</p>
       </div>
       <div class="note warn">
         <h3>Perfboard too small? Split off the LED circuit</h3>
@@ -528,7 +527,47 @@
       </div>
       <div class="note">
         <h3>Slider</h3>
-        <p>The two end pins go to VCC (3.3V) and GND, the wiper to <span class="chip">029</span>. If the direction is backwards, swap the ends or flip <code>MOUSE_INVERT_X</code> in code. Use VCC, not RAW, or the ADC range will be off.</p>
+        <p>The two end pins go to VCC (3.3V) and GND, the wiper to <span class="chip">GP28</span> (A2). If the direction is backwards, swap the ends or turn on <b>Reverse slider direction</b> on the settings page. Use VCC, not RAW, or the ADC range will be off.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Firmware install &amp; settings</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>1. Download the firmware</h3>
+        <p>Get the latest <b>RP2040 <span class="mono">.uf2</span></b> file from <a href="https://github.com/ConfeitoHS/infalsus-con/releases" target="_blank" rel="noopener">GitHub Releases</a> (for example <span class="mono">firmware-rp2040-hw1_1.uf2</span>).</p>
+      </div>
+      <div class="note">
+        <h3>2. Flash the board</h3>
+        <p><b>Hold the board's BOOT button</b> while plugging in USB, or hold BOOT and press RST. When an <span class="mono">RPI-RP2</span> drive appears, copy the <span class="mono">.uf2</span> file onto it.</p>
+        <p>The board restarts by itself when the copy finishes and the drive disappears. No installer or driver is needed.</p>
+      </div>
+      <div class="note">
+        <h3>3. Check it works</h3>
+        <p>At power-up LED1→6 light once in turn. The buttons send <b>Shift A S D F Space</b>; the slider moves the mouse left and right.</p>
+        <p>Plugging in the slider cable flashes the LEDs once; unplugging flashes them twice.</p>
+      </div>
+      <div class="note">
+        <h3>4. Change settings on the web</h3>
+        <p>Open the <a href="https://confeitohs.github.io/infalsus-con/config/" target="_blank" rel="noopener">settings page</a> in Chrome or Edge and press <b>Connect controller</b>. Works on Windows, macOS and Linux with nothing to install.</p>
+        <p>You can change LED brightness, slider sensitivity, wake-up distance, slider direction, centre position, and the re-centre chord and tap count. Changes apply at once; press <b>Save to controller</b> to keep them after unplugging.</p>
+      </div>
+      <div class="note">
+        <h3>5. Re-centre</h3>
+        <p>Right after the game moves the cursor to the centre at the start of a song, tap <b>A S D F + (Shift or Space)</b> together <b>4 times within 0.5 s</b> (default). The cursor lines up with the slider; the LEDs flash twice when done.</p>
+        <p>First, on the settings page, put the slider in the middle of the housing and press <b>Use the current slider position</b>.</p>
+      </div>
+      <div class="note">
+        <h3>LED brightness without the page</h3>
+        <p>Within <b>10 s of plugging in</b>, hold <b>all six buttons</b> and move the slider to set the brightness. Let go to save; the LEDs flash twice.</p>
+      </div>
+      <div class="note warn">
+        <h3>Troubleshooting</h3>
+        <p><b>PC does not detect it</b>: plug the USB cable straight into the board. Extensions and hubs can stop some PCs from detecting it. Also make sure the cable is not charge-only.</p>
+        <p><b>Settings page won't connect</b>: use Chrome or Edge and close any other program holding the port, such as a serial monitor. If the controller is not listed, tick "shows every serial port" and connect again.</p>
+        <p><b>Slider feels slow to start</b>: lower <b>Wake-up distance</b> on the settings page. If the cursor jitters after you let go, raise it a little.</p>
       </div>
     </div>
   </section>
